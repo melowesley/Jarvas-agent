@@ -2,6 +2,7 @@
 """Cliente OpenRouter para o Hermes — envia mensagens, retorna resposta do assistente."""
 
 import os
+from functools import lru_cache
 from openai import OpenAI
 from dotenv import load_dotenv
 from jarvas.router import detect_task_type, choose_model
@@ -9,6 +10,7 @@ from jarvas.router import detect_task_type, choose_model
 load_dotenv()
 
 
+@lru_cache(maxsize=1)
 def _get_client() -> OpenAI:
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
@@ -49,4 +51,5 @@ def chat(
         temperature=0.7,
         max_tokens=2000,
     )
-    return resposta.choices[0].message.content, modelo_selecionado
+    content = resposta.choices[0].message.content or ""
+    return content, modelo_selecionado
