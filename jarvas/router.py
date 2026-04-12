@@ -1,6 +1,10 @@
 # jarvas/router.py
 """Detecção de tipo de tarefa por palavras-chave e seleção de modelo."""
 
+# IMPORTANTE: A ordem das chaves define a prioridade de detecção.
+# "analysis" deve vir antes de "code" para que mensagens como
+# "analise esse código" sejam roteadas para analysis e não para code
+# (já que "código" é palavra-chave de code). Não reordene sem testar.
 _PALAVRAS_CHAVE = {
     "analysis": [
         "analise", "analisa", "compare", "compara", "explica",
@@ -26,7 +30,11 @@ _MODELOS = {
 
 
 def detect_task_type(mensagem: str) -> str:
-    """Retorna 'code', 'vision', 'analysis' ou 'chat' baseado nas palavras-chave."""
+    """Retorna 'code', 'vision', 'analysis' ou 'chat' baseado nas palavras-chave.
+
+    Quando a mensagem corresponde a múltiplos tipos, o primeiro tipo definido
+    em _PALAVRAS_CHAVE tem prioridade: analysis > vision > code > chat.
+    """
     lower = mensagem.lower()
     for tipo, palavras in _PALAVRAS_CHAVE.items():
         if any(p in lower for p in palavras):
