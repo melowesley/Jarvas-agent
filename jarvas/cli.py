@@ -2,7 +2,6 @@
 """Jarvas — ponto de entrada do assistente de IA distribuído."""
 
 import argparse
-import sys
 
 
 def main():
@@ -18,7 +17,6 @@ def main():
         print(f"[jarvas] modo direto: {args.query}")
     else:
         print("[jarvas] modo interativo — em breve")
-        sys.exit(0)
 
 
 if __name__ == "__main__":
