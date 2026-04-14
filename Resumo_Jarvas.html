@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo Executivo - Jarvas v0.3.0</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-top: 0;
+        }
+        h2 {
+            color: #2980b9;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #34495e;
+        }
+        p {
+            text-align: justify;
+        }
+        .box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+        code {
+            background-color: #f1f2f6;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        .no-print {
+            background-color: #ffeaa7;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        💡 Dica: Para salvar como PDF, aperte <code>Ctrl + P</code> (ou <code>Cmd + P</code> no Mac) e escolha "Salvar como PDF" no seu navegador.
+    </div>
+
+    <header>
+        <h1>Projeto Jarvas</h1>
+        <p class="subtitle">Resumo Executivo do Sistema — Versão 0.3.0</p>
+    </header>
+
+    <h2>1. O que é o Jarvas?</h2>
+    <p>O <strong>Jarvas</strong> é um assistente de inteligência artificial distribuído. Diferente de um chatbot comum que utiliza apenas um modelo, o Jarvas atua como um maestro (orquestrador). Ele analisa o que o usuário está pedindo e <strong>roteia automaticamente</strong> a tarefa para o modelo mais qualificado (como Claude para análises ou GPT-4o para visão).</p>
+    
+    <div class="box">
+        <strong>Diferencial:</strong> O sistema incorpora "Guardas" — modelos especializados chamados para tarefas estruturais ou semânticas sob demanda, além de possuir suporte nativo para memória persistente e agentes instanciados.
+    </div>
+
+    <h2>2. Como posso interagir com ele?</h2>
+    <p>O Jarvas (v0.3.0) oferece três vias de comunicação principais:</p>
+    <ul>
+        <li><strong>Terminal (CLI):</strong> Uma interface rica de linha de comando onde você conversa diretamente (REPL). Suporta <em>slash commands</em> para acesso rápido a recursos avançados.</li>
+        <li><strong>Interface Web (UI):</strong> Um chat via navegador. Quando o Jarvas é rodado no modo gerenciado (<code>jarvas --managed</code>), ele sobe uma página HTML interativa na porta 8000.</li>
+        <li><strong>Integração de Sistemas (API REST):</strong> Um backend completo em FastAPI para conectar o Jarvas a outros softwares, criar e listar agentes isolados (sessões) e acessar os guardas via HTTP.</li>
+    </ul>
+
+    <h2>3. A Força dos Guardas</h2>
+    <p>O sistema conta com dois "Guardas" que operam de forma paralela ao chat principal, acionados por comandos ou requisições API:</p>
+    <table>
+        <tr>
+            <th>Guarda</th>
+            <th>Modelo Base</th>
+            <th>Especialidade</th>
+            <th>Uso Rápido (CLI)</th>
+        </tr>
+        <tr>
+            <td><strong>Gemini</strong></td>
+            <td><code>gemini-2.5-flash</code></td>
+            <td>Análise semântica rápida, busca na web (web search nativa) e síntese de informações.</td>
+            <td><code>/g [msg]</code> ou <code>/g web [msg]</code></td>
+        </tr>
+        <tr>
+            <td><strong>DeepSeek</strong></td>
+            <td><code>deepseek-chat</code></td>
+            <td>Estruturação arquivística, organização de dados e formatação complexa.</td>
+            <td><code>/d [msg]</code> ou <code>/d web [msg]</code></td>
+        </tr>
+    </table>
+    <p><em>Nota:</em> O Jarvas possui um comando incrível chamado <code>/debate [tópico]</code> que coloca o Guarda Gemini e o Guarda DeepSeek para debaterem sobre um assunto em rodadas estipuladas, gerando um consenso final valioso.</p>
+
+    <h2>4. Memória e Persistência</h2>
+    <p>O Jarvas nunca esquece (a menos que você queira):</p>
+    <ul>
+        <li><strong>MemPalace:</strong> Um sistema próprio de "Palácio da Memória" acessível via comandos <code>/hmem</code>. Permite guardar fragmentos de conhecimento, buscar semanticamente e gerar Grafos de Conhecimento (Knowledge Graphs).</li>
+        <li><strong>Banco de Dados (Supabase):</strong> Todas as conversas, logs de guardas e resultados de debates são persistidos de forma assíncrona. Se algo der errado no banco, o Jarvas silencia o erro e não interrompe a sua conversa.</li>
+    </ul>
+
+    <h2>5. Novidades da Versão 0.3.0</h2>
+    <ul>
+        <li>Implementação do <strong>Modo Gerenciado (Managed Mode)</strong> com servidor Uvicorn/FastAPI via <code>jarvas --managed</code>.</li>
+        <li>Suporte nativo para criar, listar e conversar com <strong>Múltiplos Agentes</strong> usando os comandos <code>/session</code>.</li>
+        <li>Atualização do motor do Google para <code>gemini-2.5-flash</code>.</li>
+    </ul>
+
+    <hr style="margin-top: 50px; border: 0; border-top: 1px solid #ecf0f1;">
+    <p style="text-align: center; color: #95a5a6; font-size: 0.9em;">Documento gerado automaticamente pelo ambiente do Jarvas.</p>
+
+</body>
+</html>

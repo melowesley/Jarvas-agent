@@ -28,10 +28,8 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         if not args:
             return "[red]Uso:[/red] /hopen <model-id>"
         return f"[yellow]Próxima mensagem usará o modelo:[/yellow] {args}"
-    if cmd == "/hmem":
-        return _hmem(args)
-
-    return f"[yellow]Comando desconhecido:[/yellow] {cmd} — use /help"
+    if cmd == "/session":
+        return _session(args)
 
 
 def _help() -> str:
@@ -51,6 +49,10 @@ def _help() -> str:
         "  [cyan]/hmem del[/cyan] <id>         → Deletar drawer\n"
         "  [cyan]/hmem graph[/cyan]            → Estatísticas do grafo\n"
         "  [cyan]/hmem kg[/cyan] <busca>       → Consultar knowledge graph\n"
+        "  [cyan]/session list[/cyan]          → Listar agentes disponíveis\n"
+        "  [cyan]/session new[/cyan] <agent>   → Criar nova sessão com agente\n"
+        "  [cyan]/session send[/cyan] <id> <msg> → Enviar mensagem para sessão\n"
+        "  [cyan]/session history[/cyan] <id>  → Ver histórico da sessão\n"
     )
 
 
@@ -81,3 +83,53 @@ def _guarda_d(args: str) -> str:
 def _hmem(args: str) -> str:
     from jarvas.mempalace_client import handle_hmem
     return handle_hmem(args)
+
+
+def _session(args: str) -> str:
+    import httpx
+    sub = args.split(None, 2)
+    if not sub or sub[0] not in ["list", "new", "send", "history"]:
+        return "[red]Uso:[/red] /session list | new <agent> | send <id> <msg> | history <id>"
+    
+    try:
+        if sub[0] == "list":
+            res = httpx.get("http://localhost:8000/v1/agents")
+            agents = res.json()
+            return "\n".join(f"- {a['name']} ({a['id']})" for a in agents)
+        
+        elif sub[0] == "new":
+            if len(sub) < 2:
+                return "[red]Uso:[/red] /session new <agent-name>"
+            agent_name = sub[1]
+            # Find agent by name
+            res = httpx.get("http://localhost:8000/v1/agents")
+            agents = res.json()
+            agent = next((a for a in agents if a['name'] == agent_name), None)
+            if not agent:
+                return f"[red]Agente não encontrado:[/red] {agent_name}"
+            res = httpx.post("http://localhost:8000/v1/sessions", json={"agent_id": agent['id']})
+            session = res.json()
+            return f"[green]Sessão criada:[/green] {session['id']}"
+        
+        elif sub[0] == "send":
+            if len(sub) < 3:
+                return "[red]Uso:[/red] /session send <session-id> <message>"
+            session_id = sub[1]
+            message = sub[2]
+            res = httpx.post(f"http://localhost:8000/v1/sessions/{session_id}/events", json={"content": message})
+            if res.status_code == 202:
+                # Wait for response - simplified, just return sent
+                return f"[green]Mensagem enviada para sessão:[/green] {session_id}"
+            else:
+                return f"[red]Erro ao enviar:[/red] {res.status_code}"
+        
+        elif sub[0] == "history":
+            if len(sub) < 2:
+                return "[red]Uso:[/red] /session history <session-id>"
+            session_id = sub[1]
+            res = httpx.get(f"http://localhost:8000/v1/sessions/{session_id}/events")
+            events = res.json()
+            return "\n".join(f"{e['type']}: {e.get('content', '')}" for e in events)
+    
+    except Exception as e:
+        return f"[red]Erro:[/red] {e}"

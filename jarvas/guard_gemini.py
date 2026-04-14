@@ -1,4 +1,4 @@
-"""Guarda Gemini — chat direto e processamento de memória em segundo plano."""
+"""Guarda Gemini — chat direto e minerador de progresso de conversas."""
 
 import os
 import warnings
@@ -12,12 +12,23 @@ from dotenv import load_dotenv
 
 from jarvas.supabase_client import save_guard_log
 
-load_dotenv()
+load_dotenv(override=True)
 
 _SYSTEM_PROMPT = (
-    "Você é o Guarda Gemini do sistema Jarvas. "
-    "Seu papel é analisar, encontrar padrões e organizar memórias de forma semântica. "
-    "Seja preciso e estruturado nas respostas."
+    "Você é o Minerador de Conhecimento do Jarvas. "
+    "Analisa conversas técnicas e extrai APENAS padrões de progresso concreto. "
+    "IGNORE: saudações, agradecimentos, conversas sociais, pedidos genéricos sem resolução. "
+    "Detecte sinais como: 'deu certo', 'funcionou', 'esse erro persiste', 'resolvido', 'ainda não resolve'. "
+    "Quando solicitado, retorne JSON VÁLIDO com schema: "
+    '{ "aprendizados": [{"descricao": str, "evidence": [str]}], '
+    '"falhas": [{"erro": str, "causa": str}], '
+    '"termos_chave": [str], '
+    '"progresso": "true"|"false"|"partial", '
+    '"workaround": null, '
+    '"confidence": 0.0 }. '
+    "Se a conversa não contiver progresso técnico relevante, retorne: "
+    '{"progresso": "false", "confidence": 0.0}. '
+    "Nunca invente aprendizados. Só inclua o que há evidência explícita na conversa."
 )
 
 
@@ -26,9 +37,9 @@ def _get_model():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY não definido no .env")
-    genai.configure(api_key=api_key)
+    genai.configure(api_key=api_key, transport="rest")
     return genai.GenerativeModel(
-        model_name="gemini-2.0-flash-exp",
+        model_name="gemini-2.5-flash",
         system_instruction=_SYSTEM_PROMPT,
     )
 
@@ -50,3 +61,39 @@ def web_search(query: str) -> str:
     resultado = resposta.text
     save_guard_log("gemini", f"[web] {query}", resultado)
     return resultado
+
+
+def mine_conversation(messages: list[dict]) -> dict | None:
+    """
+    Analisa histórico de conversa e extrai padrões de progresso.
+    Retorna dict validado ou None se sem progresso relevante.
+    """
+    import json
+    import re
+
+    if len(messages) < 4:
+        return None
+
+    msgs = messages[-20:]
+    transcript = "\n".join(
+        f"{m['role'].upper()}: {m.get('content', '')[:500]}" for m in msgs
+    )
+    prompt = (
+        f"Analise esta conversa técnica:\n\n{transcript}\n\n"
+        "Retorne APENAS o JSON estruturado conforme schema definido. Sem texto adicional."
+    )
+    try:
+        from jarvas.miners.models import LearningsOut
+
+        model = _get_model()
+        resposta = model.generate_content(prompt)
+        match = re.search(r'\{.*\}', resposta.text, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+            validated = LearningsOut(**data)
+            if validated.confidence < 0.3 or validated.progresso == "false":
+                return None
+            return validated.model_dump()
+    except Exception:
+        pass
+    return None

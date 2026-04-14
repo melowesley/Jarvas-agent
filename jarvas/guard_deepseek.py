@@ -1,7 +1,13 @@
-"""Guarda DeepSeek — chat direto, busca web e processamento arquivístico."""
+"""Guarda DeepSeek — chat direto, busca web e mineração de código."""
 
 import os
+import re
 from functools import lru_cache
+
+_SENSITIVE_RE = re.compile(
+    r'(api[_-]?key|token|secret|password|bearer|sk-|AIza)\s*[=:]\s*\S+',
+    re.IGNORECASE,
+)
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -64,3 +70,60 @@ def web_search(query: str) -> str:
     resultado = resposta.choices[0].message.content
     save_guard_log("deepseek", f"[web] {query}", resultado)
     return resultado
+
+
+def mine_code(messages: list[dict]) -> dict | None:
+    """
+    Extrai snippets de código da conversa, classifica funcionou/falhou,
+    e redige credenciais detectadas. Retorna None se sem snippets relevantes.
+    """
+    import json
+
+    code_blocks: list[dict] = []
+    for m in messages:
+        for match in re.finditer(r'```(\w*)\n(.*?)```', m.get("content", ""), re.DOTALL):
+            lang = match.group(1) or "text"
+            code = match.group(2)
+            sensitive = bool(_SENSITIVE_RE.search(code))
+            code_blocks.append({
+                "lang": lang,
+                "code": code,
+                "sensitive": sensitive,
+                "role": m.get("role", ""),
+            })
+
+    if not code_blocks:
+        return None
+
+    summary = "\n---\n".join(
+        f"[{b['role']}] {b['lang']}:\n{b['code'][:300]}" for b in code_blocks
+    )
+    prompt = (
+        f"Classifique cada snippet abaixo como funcionou/falhou e explique brevemente:\n\n{summary}\n\n"
+        'Retorne JSON: {"snippets": [{"linguagem":str,"codigo":str,"funcionou":bool,"motivo":str}], "confidence": 0.0}'
+    )
+    try:
+        from jarvas.miners.models import CodeMineOut
+
+        client = _get_client()
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+        )
+        text = resp.choices[0].message.content
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+            # Marcar e redigir credenciais detectadas localmente
+            for i, s in enumerate(data.get("snippets", [])):
+                if i < len(code_blocks) and code_blocks[i]["sensitive"]:
+                    s["sensitive"] = True
+                    s["codigo"] = "[REDACTED]"
+            out = CodeMineOut(**data)
+            if out.confidence < 0.3:
+                return None
+            return out.model_dump()
+    except Exception:
+        pass
+    return None

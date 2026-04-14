@@ -50,21 +50,27 @@ def load_history(session_id: str, limit: int = 20) -> list[dict]:
 
 
 def save_guard_log(guard: str, input_text: str, output_text: str) -> None:
-    """Persiste uma interação com o guarda."""
-    _get_client().table("guard_logs").insert({
-        "guard": guard,
-        "input": input_text,
-        "output": output_text,
-    }).execute()
+    """Persiste uma interação com o guarda (falha silenciosamente se RLS bloquear)."""
+    try:
+        _get_client().table("guard_logs").insert({
+            "guard": guard,
+            "input": input_text,
+            "output": output_text,
+        }).execute()
+    except Exception as e:
+        print(f"[warn] guard_log não salvo ({guard}): {e}")
 
 
 def save_debate_log(topic: str, rounds: list[dict], consensus: str) -> None:
-    """Persiste a transcrição de um debate."""
-    _get_client().table("debate_logs").insert({
-        "topic": topic,
-        "rounds": rounds,
-        "consensus": consensus,
-    }).execute()
+    """Persiste a transcrição de um debate (falha silenciosamente se RLS bloquear)."""
+    try:
+        _get_client().table("debate_logs").insert({
+            "topic": topic,
+            "rounds": rounds,
+            "consensus": consensus,
+        }).execute()
+    except Exception as e:
+        print(f"[warn] debate_log não salvo: {e}")
 
 
 def load_session_by_time(data_str: str, hora_str: str) -> list[dict]:

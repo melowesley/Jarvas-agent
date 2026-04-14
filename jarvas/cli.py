@@ -74,8 +74,15 @@ def main():
         description="Jarvas — seu assistente de IA distribuído",
     )
     parser.add_argument("args", nargs="*", help="Pergunta direta ou 'continuar <data> <hora>'")
-    parser.add_argument("--version", action="version", version="jarvas 0.1.0")
+    parser.add_argument("--version", action="version", version="jarvas 0.3.0")
+    parser.add_argument("--managed", action="store_true", help="Run the managed agent server")
+    parser.add_argument("--port", type=int, default=8000, help="Porta para executar o servidor managed (default: 8000)")
     parsed = parser.parse_args()
+
+    if parsed.managed:
+        import uvicorn
+        uvicorn.run("jarvas.api:app", host="0.0.0.0", port=parsed.port, reload=False)
+        return
 
     if not parsed.args:
         rodar_interativo()

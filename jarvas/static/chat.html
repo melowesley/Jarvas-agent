@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvas</title>
+  <style>
+    :root {
+      --bg:        #0d0d0d;
+      --bg2:       #141414;
+      --bg3:       #1a1a1a;
+      --bg4:       #202020;
+      --border:    #2a2a2a;
+      --green:     #00ff41;
+      --green-dim: #00b428;
+      --cyan:      #00ffff;
+      --yellow:    #ffff00;
+      --purple:    #b060ff;
+      --orange:    #ff8c00;
+      --gray:      #555;
+      --text:      #e0e0e0;
+      --red:       #ff3c3c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 14px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      color: var(--green);
+      font-size: 15px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-badges {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      color: var(--gray);
+      background: var(--bg3);
+      transition: all 0.3s;
+    }
+
+    .badge.on  { border-color: var(--green-dim); color: var(--green); background: rgba(0,255,65,0.05); }
+    .badge.off { border-color: rgba(255,60,60,0.3); color: var(--red); }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* ── Command Panel ── */
+    #panel {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .panel-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .panel-label {
+      font-size: 10px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      min-width: 60px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Agent buttons */
+    .agent-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .agent-btn:hover { border-color: var(--green-dim); color: var(--green); }
+
+    .agent-btn.active {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(0,255,65,0.08);
+    }
+
+    .agent-btn.offline { border-color: rgba(180,96,255,0.4); }
+    .agent-btn.offline:hover { border-color: var(--purple); color: var(--purple); }
+    .agent-btn.offline.active { border-color: var(--purple); color: var(--purple); background: rgba(180,96,255,0.08); }
+
+    /* Command chips */
+    .cmd-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--gray);
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .cmd-btn:hover  { border-color: var(--cyan); color: var(--cyan); }
+    .cmd-btn.g      { --accent: var(--cyan); }
+    .cmd-btn.d      { --accent: var(--green); }
+    .cmd-btn.debate { --accent: var(--yellow); }
+    .cmd-btn.mem    { --accent: var(--purple); }
+    .cmd-btn.util   { --accent: var(--orange); }
+
+    .cmd-btn:hover { border-color: var(--accent, var(--cyan)); color: var(--accent, var(--cyan)); }
+
+    /* Quick prompts */
+    .prompt-chip {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--gray);
+      padding: 3px 9px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .prompt-chip:hover { border-color: var(--green-dim); color: var(--text); border-style: solid; }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: var(--bg); }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg { display: flex; flex-direction: column; gap: 4px; max-width: 860px; }
+    .msg.user      { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; }
+
+    .msg-label { font-size: 11px; color: var(--gray); padding: 0 4px; }
+    .msg.user .msg-label { color: var(--yellow); }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 8px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg.user .msg-bubble {
+      background: rgba(255,255,0,0.06);
+      border: 1px solid rgba(255,255,0,0.18);
+      color: var(--yellow);
+    }
+
+    .msg.assistant .msg-bubble {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--green);
+    }
+
+    .msg.assistant.gemini .msg-bubble   { border-color: rgba(0,255,255,0.3); color: var(--cyan); }
+    .msg.assistant.deepseek .msg-bubble { border-color: rgba(0,180,40,0.4); }
+    .msg.assistant.local .msg-bubble    { border-color: rgba(180,96,255,0.4); color: #c890ff; }
+    .msg.assistant.debate .msg-bubble   { border-color: rgba(255,255,0,0.2); color: var(--text); }
+    .msg.assistant.error .msg-bubble    { border-color: rgba(255,60,60,0.4); color: var(--red); }
+
+    .msg-meta { font-size: 11px; color: var(--gray); padding: 0 4px; }
+
+    /* Tool event pills */
+    .tool-event {
+      align-self: flex-start;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--gray);
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg3);
+      max-width: 600px;
+    }
+
+    .tool-event .tool-name { color: var(--orange); }
+    .tool-event .tool-input { color: var(--gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+
+    /* Debate */
+    .debate-round       { margin-top: 10px; }
+    .debate-round-title { color: var(--cyan); font-size: 12px; margin-bottom: 4px; }
+    .debate-gemini      { color: var(--cyan); margin-bottom: 6px; }
+    .debate-deepseek    { color: var(--green); margin-bottom: 6px; }
+    .debate-consensus   { color: var(--yellow); margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+
+    /* Typing */
+    .typing { display: flex; align-items: center; gap: 6px; color: var(--gray); font-size: 12px; padding: 8px 0; }
+    .dots span { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--green-dim); animation: blink 1.2s infinite; }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity:0.2; } 40% { opacity:1; } }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    .debate-topic-row { display: none; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .debate-topic-row.visible { display: flex; }
+    .debate-topic-row label { color: var(--gray); font-size: 12px; white-space: nowrap; }
+    .debate-rounds { width: 60px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; font-family: inherit; font-size: 13px; }
+
+    .input-row { display: flex; gap: 10px; align-items: flex-end; }
+
+    #input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      min-height: 42px;
+      max-height: 120px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+
+    #input:focus { border-color: var(--green-dim); }
+    #input::placeholder { color: var(--gray); }
+
+    #send-btn {
+      background: rgba(0,255,65,0.08);
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      white-space: nowrap;
+      transition: all 0.15s;
+      height: 42px;
+    }
+
+    #send-btn:hover    { background: rgba(0,255,65,0.18); }
+    #send-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .hint { margin-top: 8px; font-size: 11px; color: var(--gray); }
+    .hint span { color: var(--green-dim); }
+
+    /* ── Current agent indicator ── */
+    #mode-indicator {
+      font-size: 11px;
+      color: var(--gray);
+      margin-bottom: 8px;
+    }
+
+    #mode-indicator strong { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>⬡ Jarvas</h1>
+  <div class="status-badges">
+    <div class="badge" id="badge-ollama"><span class="badge-dot"></span>Ollama</div>
+    <div class="badge" id="badge-gemini"><span class="badge-dot"></span>Gemini</div>
+    <div class="badge" id="badge-openrouter"><span class="badge-dot"></span>OpenRouter</div>
+  </div>
+</header>
+
+<!-- ── Command Panel ── -->
+<div id="panel">
+
+  <!-- Agentes -->
+  <div class="panel-section">
+    <span class="panel-label">Agentes</span>
+    <div class="btn-group" id="agent-btns">
+      <!-- preenchido via JS -->
+      <button class="agent-btn active" data-mode="hermes" data-source="legacy">🧠 Hermes</button>
+      <button class="agent-btn" data-mode="gemini"   data-source="legacy">✨ Gemini</button>
+      <button class="agent-btn" data-mode="deepseek" data-source="legacy">🔵 DeepSeek</button>
+      <button class="agent-btn offline" data-mode="gemma-local" data-source="managed">🖥️ Local (Ollama)</button>
+    </div>
+  </div>
+
+  <!-- Guardas -->
+  <div class="panel-section">
+    <span class="panel-label">Guardas</span>
+    <div class="btn-group">
+      <button class="cmd-btn g"    data-cmd="gemini-chat">✨ Gemini Chat</button>
+      <button class="cmd-btn g"    data-cmd="gemini-web">🌐 Gemini Web</button>
+      <button class="cmd-btn d"    data-cmd="deepseek-chat">🔵 DeepSeek Chat</button>
+      <button class="cmd-btn d"    data-cmd="deepseek-web">🌐 DeepSeek Web</button>
+      <button class="cmd-btn debate" data-cmd="debate">⚔️ Debate</button>
+    </div>
+  </div>
+
+  <!-- MemPalace -->
+  <div class="panel-section">
+    <span class="panel-label">MemPalace</span>
+    <div class="btn-group">
+      <button class="cmd-btn mem" data-cmd="hmem-status">📊 Status</button>
+      <button class="cmd-btn mem" data-cmd="hmem-list">📋 Listar Wings</button>
+      <button class="cmd-btn mem" data-cmd="hmem-search">🔍 Buscar</button>
+      <button class="cmd-btn mem" data-cmd="hmem-graph">🕸️ Grafo</button>
+    </div>
+  </div>
+
+  <!-- Quick prompts -->
+  <div class="panel-section">
+    <span class="panel-label">Exemplos</span>
+    <div class="btn-group">
+      <button class="prompt-chip" data-prompt="Leia o arquivo jarvas/api.py e me explique o que ele faz">📄 Ler arquivo</button>
+      <button class="prompt-chip" data-prompt="Liste os arquivos na pasta jarvas/">📁 Listar pasta</button>
+      <button class="prompt-chip" data-prompt="Pesquise na web: novidades do Python 3.13">🌐 Busca web</button>
+      <button class="prompt-chip" data-prompt="Resuma o conteúdo do arquivo README.md">📝 Resumir</button>
+      <button class="prompt-chip" data-prompt="Mostre os agentes disponíveis com /session list">🤖 Ver agentes</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Messages ── -->
+<div id="messages"></div>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="debate-topic-row" id="debate-options">
+    <label>Rodadas:</label>
+    <input type="number" class="debate-rounds" id="rounds" value="3" min="1" max="6" />
+  </div>
+  <div id="mode-indicator">Modo: <strong id="mode-name">Hermes</strong></div>
+  <div class="input-row">
+    <textarea id="input" placeholder="Digite sua mensagem ou clique num botão acima..." rows="1"></textarea>
+    <button id="send-btn">Enviar</button>
+  </div>
+  <div class="hint"><span>Enter</span> envia &nbsp;·&nbsp; <span>Shift+Enter</span> nova linha</div>
+</footer>
+
+<script>
+  const messagesEl  = document.getElementById('messages');
+  const inputEl     = document.getElementById('input');
+  const sendBtn     = document.getElementById('send-btn');
+  const debateOpts  = document.getElementById('debate-options');
+  const roundsEl    = document.getElementById('rounds');
+  const modeNameEl  = document.getElementById('mode-name');
+
+  // State
+  let mode        = 'hermes';   // hermes | gemini | deepseek | debate | managed
+  let activeCmd   = null;       // cmd active when mode='cmd'
+  let historico   = [];
+  let loading     = false;
+  let managedSession = null;    // { id, agentName }
+
+  // Agent registry (filled from /v1/agents)
+  let agentRegistry = {};  // name → id
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function scrollBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+  function now() {
+    return new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+
+  function appendMsg(role, content, extra = {}) {
+    const div = document.createElement('div');
+    div.className = `msg ${role}${extra.cls ? ' '+extra.cls : ''}`;
+
+    const label = document.createElement('div');
+    label.className = 'msg-label';
+    label.textContent = role === 'user' ? 'você' : (extra.label || 'Jarvas');
+    div.appendChild(label);
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    if (extra.html) bubble.innerHTML = content;
+    else bubble.textContent = content;
+    div.appendChild(bubble);
+
+    if (extra.meta) {
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+      meta.textContent = extra.meta;
+      div.appendChild(meta);
+    }
+
+    messagesEl.appendChild(div);
+    scrollBottom();
+    return bubble;
+  }
+
+  function appendToolEvent(name, input) {
+    const div = document.createElement('div');
+    div.className = 'tool-event';
+    const inputStr = typeof input === 'object' ? JSON.stringify(input) : String(input);
+    div.innerHTML = `🔧 <span class="tool-name">${escHtml(name)}</span><span class="tool-input">${escHtml(inputStr)}</span>`;
+    messagesEl.appendChild(div);
+    scrollBottom();
+  }
+
+  function appendTyping(id = 'typing-indicator') {
+    const div = document.createElement('div');
+    div.className = 'typing';
+    div.id = id;
+    div.innerHTML = `<div class="dots"><span></span><span></span><span></span></div> processando...`;
+    messagesEl.appendChild(div);
+    scrollBottom();
+  }
+
+  function removeTyping(id = 'typing-indicator') {
+    const t = document.getElementById(id);
+    if (t) t.remove();
+  }
+
+  function formatDebate(data) {
+    let html = `<div><strong style="color:var(--cyan)">${escHtml(data.topic)}</strong></div>`;
+    data.rounds.forEach(r => {
+      html += `<div class="debate-round">`;
+      html += `<div class="debate-round-title">── Rodada ${r.round} ──</div>`;
+      html += `<div class="debate-gemini"><strong>[Gemini]</strong> ${escHtml(r.gemini)}</div>`;
+      html += `<div class="debate-deepseek"><strong>[DeepSeek]</strong> ${escHtml(r.deepseek)}</div>`;
+      html += `</div>`;
+    });
+    html += `<div class="debate-consensus"><strong>Consenso:</strong><br>${escHtml(data.consensus)}</div>`;
+    return html;
+  }
+
+  // ── Status badges ─────────────────────────────────────────────────────────────
+  async function refreshStatus() {
+    try {
+      const data = await fetch('/status').then(r => r.json());
+      setBadge('badge-ollama',     data.ollama?.ok);
+      setBadge('badge-gemini',     data.gemini?.ok);
+      setBadge('badge-openrouter', data.openrouter?.ok);
+
+      // disable agents that need missing backends
+      document.querySelectorAll('.agent-btn[data-mode="gemini"]')
+        .forEach(b => b.disabled = !data.gemini?.ok);
+      document.querySelectorAll('.agent-btn[data-mode="deepseek"]')
+        .forEach(b => b.disabled = !data.openrouter?.ok);
+      document.querySelectorAll('.agent-btn[data-mode="gemma-local"]')
+        .forEach(b => b.disabled = !data.ollama?.ok);
+    } catch (_) {}
+  }
+
+  function setBadge(id, ok) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('on',  !!ok);
+    el.classList.toggle('off', !ok);
+  }
+
+  refreshStatus();
+  setInterval(refreshStatus, 30000);
+
+  // ── Load managed agents ───────────────────────────────────────────────────────
+  async function loadAgents() {
+    try {
+      const agents = await fetch('/v1/agents').then(r => r.json());
+      agents.forEach(a => { agentRegistry[a.name] = a.id; });
+    } catch (_) {}
+  }
+
+  loadAgents();
+
+  // ── Agent button clicks ───────────────────────────────────────────────────────
+  document.querySelectorAll('.agent-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const m = btn.dataset.mode;
+      const src = btn.dataset.source;
+
+      debateOpts.classList.remove('visible');
+
+      if (src === 'managed') {
+        mode = 'managed';
+        managedSession = null; // will create on first send
+        activeCmd = m;         // store agent name
+        modeNameEl.textContent = btn.textContent.trim();
+        inputEl.placeholder = `Conversar com ${btn.textContent.trim()}...`;
+      } else {
+        mode = m;
+        managedSession = null;
+        activeCmd = null;
+        modeNameEl.textContent = btn.textContent.trim();
+        inputEl.placeholder = 'Digite sua mensagem...';
+      }
+      inputEl.focus();
+    });
+  });
+
+  // ── Command button clicks ─────────────────────────────────────────────────────
+  document.querySelectorAll('.cmd-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cmd = btn.dataset.cmd;
+
+      // Debate requires topic in textarea
+      if (cmd === 'debate') {
+        document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+        mode = 'debate';
+        activeCmd = null;
+        managedSession = null;
+        debateOpts.classList.add('visible');
+        modeNameEl.textContent = '⚔️ Debate';
+        inputEl.placeholder = 'Tópico do debate...';
+        inputEl.focus();
+        return;
+      }
+
+      // Search commands — open input for query
+      if (cmd === 'hmem-search') {
+        inputEl.value = '/hmem search ';
+        inputEl.focus();
+        return;
+      }
+
+      // Instant commands (no user text needed)
+      const instant = {
+        'hmem-status': '/hmem status',
+        'hmem-list':   '/hmem list',
+        'hmem-graph':  '/hmem graph',
+      };
+      if (instant[cmd]) {
+        inputEl.value = instant[cmd];
+        send();
+        return;
+      }
+
+      // Mode switch commands
+      const modeMap = {
+        'gemini-chat':    'gemini',
+        'gemini-web':     'gemini-web',
+        'deepseek-chat':  'deepseek',
+        'deepseek-web':   'deepseek-web',
+      };
+      if (modeMap[cmd]) {
+        document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+        mode = modeMap[cmd];
+        activeCmd = null;
+        managedSession = null;
+        debateOpts.classList.remove('visible');
+        const labels = {
+          'gemini':       '✨ Gemini Chat',
+          'gemini-web':   '🌐 Gemini Web',
+          'deepseek':     '🔵 DeepSeek Chat',
+          'deepseek-web': '🌐 DeepSeek Web',
+        };
+        modeNameEl.textContent = labels[mode];
+        inputEl.placeholder = 'Digite sua mensagem...';
+        inputEl.focus();
+      }
+    });
+  });
+
+  // ── Quick prompt chips ────────────────────────────────────────────────────────
+  document.querySelectorAll('.prompt-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      inputEl.value = chip.dataset.prompt;
+      inputEl.dispatchEvent(new Event('input'));
+      inputEl.focus();
+    });
+  });
+
+  // ── Auto-resize textarea ──────────────────────────────────────────────────────
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  });
+
+  // ── Enter to send ─────────────────────────────────────────────────────────────
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  sendBtn.addEventListener('click', send);
+
+  // ── Send ──────────────────────────────────────────────────────────────────────
+  async function send() {
+    if (loading) return;
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    loading = true;
+    sendBtn.disabled = true;
+
+    appendMsg('user', text);
+    appendTyping();
+
+    try {
+      if (mode === 'managed') {
+        await sendManaged(text);
+      } else {
+        await sendLegacy(text);
+      }
+    } catch (err) {
+      removeTyping();
+      appendMsg('assistant', `Falha de conexão: ${err.message}`, { cls: 'error', label: 'Erro' });
+    } finally {
+      loading = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  // ── Legacy REST send (hermes, gemini, deepseek, debate) ───────────────────────
+  async function sendLegacy(text) {
+    let url, body;
+
+    if (mode === 'hermes') {
+      url  = '/chat';
+      body = { mensagem: text, historico };
+    } else if (mode === 'gemini') {
+      url  = '/g';
+      body = { mensagem: text };
+    } else if (mode === 'gemini-web') {
+      url  = '/g/web';
+      body = { mensagem: text };
+    } else if (mode === 'deepseek') {
+      url  = '/d';
+      body = { mensagem: text };
+    } else if (mode === 'deepseek-web') {
+      url  = '/d/web';
+      body = { mensagem: text };
+    } else if (mode === 'debate') {
+      url  = '/debate';
+      body = { topico: text, rodadas: parseInt(roundsEl.value) || 3 };
+    } else {
+      // fallback: hermes
+      url  = '/chat';
+      body = { mensagem: text, historico };
+    }
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    removeTyping();
+
+    if (!res.ok) {
+      const err = await res.text();
+      appendMsg('assistant', `Erro ${res.status}: ${err}`, { cls: 'error', label: 'Jarvas' });
+      return;
+    }
+
+    const data = await res.json();
+
+    if (mode === 'hermes') {
+      historico.push({ role: 'user',      content: text });
+      historico.push({ role: 'assistant', content: data.resposta });
+      appendMsg('assistant', data.resposta, {
+        label: data.modelo,
+        meta: `${data.tipo} · ${data.modelo} · ${now()}`,
+      });
+    } else if (mode === 'gemini' || mode === 'gemini-web') {
+      appendMsg('assistant', data.resposta, {
+        cls: 'gemini', label: 'Gemini',
+        meta: `Guarda Gemini${mode === 'gemini-web' ? ' Web' : ''} · ${now()}`,
+      });
+    } else if (mode === 'deepseek' || mode === 'deepseek-web') {
+      appendMsg('assistant', data.resposta, {
+        cls: 'deepseek', label: 'DeepSeek',
+        meta: `Guarda DeepSeek${mode === 'deepseek-web' ? ' Web' : ''} · ${now()}`,
+      });
+    } else if (mode === 'debate') {
+      appendMsg('assistant', formatDebate(data), {
+        cls: 'debate', label: 'Debate',
+        meta: `${data.rounds.length} rodadas · ${now()}`,
+        html: true,
+      });
+    }
+  }
+
+  // ── Managed Agent send (SSE) ──────────────────────────────────────────────────
+  async function sendManaged(text) {
+    const agentName = activeCmd; // e.g. 'gemma-local'
+
+    // Create session if needed
+    if (!managedSession) {
+      const agentId = agentRegistry[agentName];
+      if (!agentId) {
+        removeTyping();
+        appendMsg('assistant', `Agente "${agentName}" não encontrado. Aguarde o servidor iniciar e tente novamente.`, { cls: 'error' });
+        return;
+      }
+      const sessRes = await fetch('/v1/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: agentId }),
+      });
+      if (!sessRes.ok) {
+        removeTyping();
+        appendMsg('assistant', `Erro ao criar sessão: ${sessRes.status}`, { cls: 'error' });
+        return;
+      }
+      const sessData = await sessRes.json();
+      managedSession = { id: sessData.id, agentName };
+    }
+
+    const sessionId = managedSession.id;
+
+    // Send user message
+    await fetch(`/v1/sessions/${sessionId}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: text }),
+    });
+
+    // Stream SSE
+    const evtSource = new EventSource(`/v1/sessions/${sessionId}/stream`);
+    let assistantBubble = null;
+    let assistantContent = '';
+
+    removeTyping();
+
+    evtSource.onmessage = (e) => {
+      let event;
+      try { event = JSON.parse(e.data); } catch { return; }
+
+      const type = event.type;
+
+      if (type === 'agent.tool_use') {
+        appendToolEvent(event.name, event.input);
+      } else if (type === 'agent.message' || type === 'message') {
+        const content = event.content || event.message || '';
+        if (!assistantBubble) {
+          assistantBubble = appendMsg('assistant', content, {
+            cls: 'local',
+            label: agentName,
+            meta: `${agentName} · ${now()}`,
+          });
+          assistantContent = content;
+        } else {
+          assistantContent += content;
+          assistantBubble.textContent = assistantContent;
+          scrollBottom();
+        }
+      } else if (type === 'message_delta') {
+        const delta = event.delta || '';
+        if (!assistantBubble) {
+          assistantBubble = appendMsg('assistant', delta, { cls: 'local', label: agentName });
+          assistantContent = delta;
+        } else {
+          assistantContent += delta;
+          assistantBubble.textContent = assistantContent;
+          scrollBottom();
+        }
+      } else if (type === 'session.status_idle') {
+        if (assistantBubble) {
+          const meta = document.createElement('div');
+          meta.className = 'msg-meta';
+          meta.textContent = `${agentName} · ${now()}`;
+          assistantBubble.parentElement.appendChild(meta);
+        }
+        evtSource.close();
+        loading = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+      } else if (type === 'session.error') {
+        evtSource.close();
+        appendMsg('assistant', `Erro do agente: ${event.message || event.error || 'desconhecido'}`, { cls: 'error' });
+        // Reset session on error
+        managedSession = null;
+        loading = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    };
+
+    evtSource.onerror = () => {
+      evtSource.close();
+      if (!assistantBubble) {
+        appendMsg('assistant', 'Conexão SSE encerrada inesperadamente.', { cls: 'error' });
+      }
+      loading = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    };
+  }
+
+  // Focus on load
+  inputEl.focus();
+</script>
+</body>
+</html>
