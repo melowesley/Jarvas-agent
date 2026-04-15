@@ -37,7 +37,7 @@ Usuário (terminal ou web)
 │ FILE_EDIT       │ file_editor.edit()                   │
 │ SET_PROJECT     │ context.set_project()                │
 │ STORE_MEMORY    │ memory_writer.store()                │
-│ ATTACH          │ attachment_handler.process()         │
+│ ATTACH / OCR    │ file_processor.process_file()        │
 │ OCR             │ ocr_agent.run()                      │
 │ SEARCH_WEB      │ guard_gemini.web_search()            │
 └────────────────────────────────────────────────────────┘
@@ -56,8 +56,7 @@ jarvas/
   guard_pipeline.py     ← NEW: Hermes+Gemini+DeepSeek paralelo + síntese
   file_editor.py        ← NEW: lê/edita/escreve arquivos no disco
   memory_writer.py      ← NEW: extrai insights e grava no MemPalace
-  attachment_handler.py ← NEW: PDF, Excel, Word, imagem
-  ocr_agent.py          ← NEW: OCR de imagem → Excel
+  file_processor.py     ← NEW: todos os tipos de arquivo, prompt-driven, saída organizada por pasta
   context.py            ← NEW: estado global da sessão (projeto atual, histórico)
   cli.py                ← MODIFICADO: usa orchestrator
   api.py                ← MODIFICADO: novos endpoints, porta 8080, novos schemas
@@ -126,7 +125,8 @@ _HANDLERS: dict[str, Callable] = {
     "FILE_EDIT":    handle_file_edit,
     "SET_PROJECT":  handle_set_project,
     "STORE_MEMORY": handle_store_memory,
-    "ATTACH":       handle_attach,
+    "ATTACH":       handle_file_process,
+    "OCR":          handle_file_process,
     "OCR":          handle_ocr,
     "SEARCH_WEB":   handle_search_web,
 }
@@ -256,41 +256,76 @@ Formato: JSON com chaves "acertos", "erros", "decisoes", "padroes"
 
 ---
 
-## 9. Attachment Handler (`jarvas/attachment_handler.py`)
+## 9. File Processor (`jarvas/file_processor.py`)
+
+> **Nota:** `attachment_handler.py` e `ocr_agent.py` foram unificados neste módulo.
+> O processamento é **guiado pelo prompt do usuário** — o arquivo é o insumo, o prompt descreve o que fazer.
 
 ### 9.1 Tipos suportados
 
-| Extensão | Biblioteca | Ação |
-|----------|-----------|------|
+| Extensão | Biblioteca | Extrator |
+|----------|-----------|----------|
 | `.pdf` | `pymupdf` (fitz) | Extrai texto por página |
-| `.xlsx`, `.xls` | `openpyxl` | Lê células e estrutura |
+| `.xlsx`, `.xls` | `openpyxl` | Lê células, cabeçalhos e estrutura |
+| `.csv` | stdlib `csv` | Lê linhas e colunas |
 | `.docx` | `python-docx` | Extrai parágrafos e tabelas |
-| `.jpg`, `.jpeg`, `.png` | `Pillow` | Prepara para OCR ou análise visual |
+| `.txt` | stdlib | Lê texto bruto |
+| `.jpg`, `.jpeg`, `.png` | `Pillow` + `pytesseract` | OCR → texto estruturado |
 
 ### 9.2 Fluxo
 
-1. Detecta extensão → chama extrator correto
-2. Envia conteúdo extraído para guard_pipeline com contexto do arquivo
-3. Retorna análise
-4. Salva na tabela `attachments` (Supabase)
+```
+Usuário: [anexa arquivo] + prompt descrevendo o que quer
+         ↓
+file_processor.extract(path) → conteúdo bruto
+         ↓
+Hermes recebe: conteúdo + prompt do usuário
+Exemplo prompt: "extraia as colunas Nome, Valor, Data
+                 mas renomeie para Pessoa, Montante, Período"
+         ↓
+Hermes retorna estrutura de dados conforme pedido
+         ↓
+file_processor.write_output(dados, output_type)
+         ↓
+Arquivo salvo na pasta de saída correspondente
+```
 
----
+### 9.3 Organização de saída
 
-## 10. OCR Agent (`jarvas/ocr_agent.py`)
-
-### 10.1 Fluxo
-
-1. Recebe caminho de imagem (`.jpg`, `.jpeg`, `.png`)
-2. Usa `pytesseract` para extrair texto (requer Tesseract instalado no sistema)
-3. Envia texto para Hermes para estruturação
-4. Gera arquivo `.xlsx` no mesmo diretório da imagem com o texto estruturado
-5. Retorna caminho do arquivo gerado
-
-### 10.2 Dependências de sistema
+Todos os arquivos gerados vão para `jarvas_outputs/` na raiz do projeto atual:
 
 ```
-Tesseract OCR: https://github.com/UB-Mannheim/tesseract/wiki
-Idiomas: por + eng
+jarvas_outputs/
+  excel/      ← .xlsx gerados (extrações, transformações)
+  images/     ← imagens processadas ou anotadas
+  pdf/        ← PDFs gerados ou resumos
+  docs/       ← Word/texto gerados
+  csv/        ← CSVs exportados
+```
+
+Se não houver projeto definido, usa `~/jarvas_outputs/`.
+
+### 9.4 Interface
+
+```python
+def process_file(path: str, instruction: str, project_base: str | None) -> dict:
+    """
+    1. Detecta extensão → chama extrator correto
+    2. Envia (conteúdo extraído + instruction) para Hermes
+    3. Hermes retorna dados estruturados conforme o prompt
+    4. Salva resultado no formato pedido (xlsx, csv, txt, docx)
+       em jarvas_outputs/<tipo>/
+    5. Salva na tabela attachments (Supabase)
+    Retorna: {output_path, summary, file_type}
+    """
+```
+
+### 9.5 Dependências de sistema
+
+```
+pytesseract (OCR de imagens):
+  Download Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
+  Idiomas: por + eng — adicionar ao PATH após instalação
 ```
 
 ---
@@ -424,12 +459,13 @@ Adicionar ao `pyproject.toml` / `requirements.txt`:
 
 ```
 pymupdf          # PDF
-openpyxl         # Excel
+openpyxl         # Excel leitura e escrita
 python-docx      # Word
 Pillow           # imagens
-pytesseract      # OCR (wrapper Python)
+pytesseract      # OCR (wrapper Python — requer Tesseract no sistema)
 difflib          # stdlib, sem adicionar
 concurrent.futures # stdlib, sem adicionar
+csv              # stdlib, sem adicionar
 ```
 
 **Tesseract** deve ser instalado separadamente no Windows:
