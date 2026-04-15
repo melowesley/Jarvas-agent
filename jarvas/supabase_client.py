@@ -107,3 +107,86 @@ def load_session_by_time(data_str: str, hora_str: str) -> list[dict]:
     if result.data:
         return result.data[0]["history"]
     return []
+
+
+def save_pipeline_result(
+    session_id: str,
+    user_message: str,
+    task_type: str,
+    results: dict,
+) -> None:
+    """Persiste resultado completo do guard pipeline."""
+    try:
+        _get_client().table("pipeline_results").insert({
+            "session_id": session_id,
+            "user_message": user_message,
+            "task_type": task_type,
+            "hermes": results.get("hermes"),
+            "gemini": results.get("gemini"),
+            "deepseek": results.get("deepseek"),
+            "sintese": results.get("sintese"),
+        }).execute()
+    except Exception as e:
+        print(f"[warn] pipeline_result nao salvo: {e}")
+
+
+def save_file_edit(
+    session_id: str,
+    file_path: str,
+    instruction: str,
+    original: str,
+    edited: str,
+    diff: str,
+) -> None:
+    """Persiste uma edicao de arquivo."""
+    try:
+        _get_client().table("file_edits").insert({
+            "session_id": session_id,
+            "file_path": file_path,
+            "instruction": instruction,
+            "original_content": original,
+            "edited_content": edited,
+            "diff": diff,
+        }).execute()
+    except Exception as e:
+        print(f"[warn] file_edit nao salvo: {e}")
+
+
+def save_attachment(
+    session_id: str,
+    file_name: str,
+    file_type: str,
+    extracted_content: str,
+    analysis: str,
+) -> None:
+    """Persiste um anexo processado."""
+    try:
+        _get_client().table("attachments").insert({
+            "session_id": session_id,
+            "file_name": file_name,
+            "file_type": file_type,
+            "extracted_content": extracted_content,
+            "analysis": analysis,
+        }).execute()
+    except Exception as e:
+        print(f"[warn] attachment nao salvo: {e}")
+
+
+def save_memory_log(
+    session_id: str,
+    wing: str,
+    room: str,
+    content: str,
+    drawer_id: str | None,
+) -> None:
+    """Persiste um registro de memoria gravada no MemPalace."""
+    try:
+        _get_client().table("memory_logs").insert({
+            "session_id": session_id,
+            "wing": wing,
+            "room": room,
+            "content": content,
+            "drawer_id": drawer_id,
+        }).execute()
+    except Exception as e:
+        print(f"[warn] memory_log nao salvo: {e}")

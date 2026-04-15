@@ -332,7 +332,7 @@
 
 <!-- ── Header ── -->
 <header>
-  <h1>⬡ Jarvas</h1>
+  <h1>⬡ Jarvas <span style="font-size:11px;color:var(--gray)">v0.4.0</span></h1>
   <a href="/autoescola" style="margin-left: 16px; color: var(--cyan); text-decoration: none; font-size: 12px; display: flex; align-items: center; gap: 4px;" title="Abrir Autoescola">📚 Autoescola</a>
   <div class="status-badges">
     <div class="badge" id="badge-ollama"><span class="badge-dot"></span>Ollama</div>
@@ -379,6 +379,20 @@
     </div>
   </div>
 
+  <!-- Acoes Rapidas v0.4.0 -->
+  <div class="panel-section">
+    <span class="panel-label">Acoes</span>
+    <div class="btn-group">
+      <button class="prompt-chip" data-prompt="analise o codigo: ">🛡️ Pipeline</button>
+      <button class="prompt-chip" data-prompt="armazene as ultimas interacoes">💾 Armazene</button>
+      <button class="prompt-chip" data-prompt="#">📁 Projeto</button>
+      <button class="prompt-chip" data-prompt="leia o arquivo: ">📄 Ler Arquivo</button>
+      <button class="prompt-chip" data-prompt="edite o arquivo: ">✏️ Editar</button>
+      <button class="prompt-chip" data-prompt="ocr: ">🔍 OCR</button>
+      <button class="prompt-chip" data-prompt="pesquise: ">🌐 Web Search</button>
+    </div>
+  </div>
+
   <!-- Quick prompts -->
   <div class="panel-section">
     <span class="panel-label">Exemplos</span>
@@ -386,8 +400,8 @@
       <button class="prompt-chip" data-prompt="Leia o arquivo jarvas/api.py e me explique o que ele faz">📄 Ler arquivo</button>
       <button class="prompt-chip" data-prompt="Liste os arquivos na pasta jarvas/">📁 Listar pasta</button>
       <button class="prompt-chip" data-prompt="Pesquise na web: novidades do Python 3.13">🌐 Busca web</button>
-      <button class="prompt-chip" data-prompt="Resuma o conteúdo do arquivo README.md">📝 Resumir</button>
-      <button class="prompt-chip" data-prompt="Mostre os agentes disponíveis com /session list">🤖 Ver agentes</button>
+      <button class="prompt-chip" data-prompt="Resuma o conteudo do arquivo README.md">📝 Resumir</button>
+      <button class="prompt-chip" data-prompt="Mostre os agentes disponiveis com /session list">🤖 Ver agentes</button>
     </div>
   </div>
 
@@ -732,8 +746,8 @@
       historico.push({ role: 'user',      content: text });
       historico.push({ role: 'assistant', content: data.resposta });
       appendMsg('assistant', data.resposta, {
-        label: data.modelo,
-        meta: `${data.tipo} · ${data.modelo} · ${now()}`,
+        label: data.modelo || 'Jarvas',
+        meta: `${data.tipo || 'orchestrator'} · ${data.modelo || 'jarvas'} · ${now()}`,
       });
     } else if (mode === 'gemini' || mode === 'gemini-web') {
       appendMsg('assistant', data.resposta, {

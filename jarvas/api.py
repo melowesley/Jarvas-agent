@@ -18,7 +18,7 @@ async def lifespan(app):
     seed_preset_agents()
     yield
 
-app = FastAPI(title="Jarvas API", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Jarvas API", version="0.4.0", lifespan=lifespan)
 app.include_router(managed_router)
 app.include_router(autoescola_router)
 
@@ -45,6 +45,28 @@ class DebateRequest(BaseModel):
     rodadas: int = 3
 
 
+class FileReadRequest(BaseModel):
+    path: str
+
+
+class FileEditRequest(BaseModel):
+    path: str
+    instruction: str
+
+
+class MemoryRequest(BaseModel):
+    scope: int = 5
+
+
+class FileProcessRequest(BaseModel):
+    path: str
+    instruction: str
+
+
+class ProjectRequest(BaseModel):
+    path: str
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -67,7 +89,7 @@ async def autoescola_ui():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.4.0"}
 
 
 @app.get("/status")
@@ -98,34 +120,26 @@ async def status():
     return result
 
 
+from jarvas.context import SessionContext as _SessionContext
+
+# Sessao web compartilhada (uma por processo)
+_web_ctx = _SessionContext()
+
+
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    """Chat principal com roteamento automático de modelos."""
+    """Chat principal -- roteado pelo orchestrator."""
     import asyncio as _asyncio
-    from jarvas.hermes_client import chat as hermes_chat
-    from jarvas.router import detect_task_type
+    from jarvas.orchestrator import process as orchestrator_process
 
-    tipo = detect_task_type(req.mensagem)
-    resposta, modelo = hermes_chat(
-        req.mensagem,
-        historico=req.historico or None,
-        modelo=req.modelo or None,
-    )
+    _web_ctx.historico = req.historico or []
+    resposta = orchestrator_process(req.mensagem, _web_ctx)
 
-    # Mineração em background após cada turno (≥4 msgs acumuladas)
-    historico_atualizado = (req.historico or []) + [
-        {"role": "user", "content": req.mensagem},
-        {"role": "assistant", "content": resposta},
-    ]
-    if len(historico_atualizado) >= 4:
+    if len(_web_ctx.historico) >= 4:
         from jarvas.miners.conversation_miner import mine
-        _asyncio.create_task(_asyncio.to_thread(mine, historico_atualizado))
+        _asyncio.create_task(_asyncio.to_thread(mine, _web_ctx.historico))
 
-    return {
-        "resposta": resposta,
-        "modelo": modelo,
-        "tipo": tipo,
-    }
+    return {"resposta": resposta, "session_id": _web_ctx.session_id}
 
 
 @app.post("/g")
@@ -171,3 +185,62 @@ async def debate(req: DebateRequest):
 
     resultado = run_debate(req.topico, max_rounds=req.rodadas)
     return resultado
+
+
+@app.post("/pipeline")
+async def pipeline(req: ChatRequest):
+    """Guard pipeline completo: Hermes + Gemini + DeepSeek + sintese."""
+    from jarvas.guard_pipeline import run
+    from jarvas.router import detect_task_type
+    task_type = detect_task_type(req.mensagem)
+    result = run(req.mensagem, task_type, _web_ctx)
+    return result
+
+
+@app.post("/file/read")
+async def file_read(req: FileReadRequest):
+    """Le arquivo do projeto."""
+    from jarvas.file_editor import read_file
+    content = read_file(req.path, _web_ctx.project_path)
+    return {"content": content, "path": req.path}
+
+
+@app.post("/file/edit")
+async def file_edit(req: FileEditRequest):
+    """Edita arquivo no disco."""
+    from jarvas.file_editor import edit_file
+    result = edit_file(req.path, req.instruction, _web_ctx.project_path, _web_ctx.session_id)
+    return result
+
+
+@app.post("/memory/store")
+async def memory_store(req: MemoryRequest):
+    """Grava insights no MemPalace."""
+    from jarvas.memory_writer import store
+    result = store(_web_ctx, scope=req.scope)
+    return {"result": result}
+
+
+@app.post("/attach")
+async def attach(req: FileProcessRequest):
+    """Processa anexo guiado por instrucao."""
+    from jarvas.file_processor import process_file
+    result = process_file(req.path, req.instruction, _web_ctx.project_path, _web_ctx.session_id)
+    return result
+
+
+@app.post("/context/project")
+async def set_project(req: ProjectRequest):
+    """Define o projeto atual da sessao web."""
+    _web_ctx.project_path = req.path
+    return {"project_path": req.path}
+
+
+@app.get("/context")
+async def get_context():
+    """Retorna estado atual da sessao web."""
+    return {
+        "session_id": _web_ctx.session_id,
+        "project_path": _web_ctx.project_path,
+        "historico_count": len(_web_ctx.historico),
+    }

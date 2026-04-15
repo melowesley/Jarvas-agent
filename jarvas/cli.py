@@ -2,16 +2,15 @@
 """Jarvas — ponto de entrada do assistente de IA distribuído."""
 
 import argparse
-import uuid
 from rich.console import Console
 from rich.markdown import Markdown
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
-from jarvas.router import detect_task_type
+from jarvas.context import SessionContext
+from jarvas.orchestrator import process as orchestrator_process
 
 console = Console()
-_historico: list[dict] = []
-_session_id = str(uuid.uuid4())
+_ctx = SessionContext()
 
 
 def _exibir_resposta(texto: str, modelo: str):
@@ -21,27 +20,18 @@ def _exibir_resposta(texto: str, modelo: str):
 
 
 def _processar_mensagem(mensagem: str) -> None:
-    """Processa uma mensagem. Roteia slash commands ou envia ao Hermes."""
+    """Processa uma mensagem. Slash commands vao para dispatch, resto para orchestrator."""
     from jarvas.commands import dispatch
 
     if mensagem.strip().startswith("/"):
-        resultado = dispatch(mensagem.strip(), _historico)
+        resultado = dispatch(mensagem.strip(), _ctx.historico)
         if resultado is not None:
             console.print(resultado)
         return
 
-    from jarvas.hermes_client import chat
-    from jarvas.supabase_client import save_message
     try:
-        resposta, modelo = chat(mensagem, historico=_historico)
-        tipo = detect_task_type(mensagem)
-        _historico.append({"role": "user", "content": mensagem})
-        _historico.append({"role": "assistant", "content": resposta})
-        try:
-            save_message(_session_id, "user", mensagem, task_type=tipo)
-            save_message(_session_id, "assistant", resposta, model=modelo, task_type=tipo)
-        except Exception:
-            pass  # falha no Supabase nunca bloqueia o usuário
+        resposta = orchestrator_process(mensagem, _ctx)
+        modelo = "jarvas"
         _exibir_resposta(resposta, modelo)
     except Exception as e:
         console.print(f"[red]Erro:[/red] {e}")
@@ -74,9 +64,9 @@ def main():
         description="Jarvas — seu assistente de IA distribuído",
     )
     parser.add_argument("args", nargs="*", help="Pergunta direta ou 'continuar <data> <hora>'")
-    parser.add_argument("--version", action="version", version="jarvas 0.3.0")
+    parser.add_argument("--version", action="version", version="jarvas 0.4.0")
     parser.add_argument("--managed", action="store_true", help="Run the managed agent server")
-    parser.add_argument("--port", type=int, default=8000, help="Porta para executar o servidor managed (default: 8000)")
+    parser.add_argument("--port", type=int, default=8080, help="Porta do servidor managed (default: 8080)")
     parsed = parser.parse_args()
 
     if parsed.managed:
@@ -95,7 +85,7 @@ def main():
         from jarvas.supabase_client import load_session_by_time
         try:
             carregado = load_session_by_time(data, hora)
-            _historico.extend(carregado)
+            _ctx.historico.extend(carregado)
             console.print(f"[green]Contexto restaurado:[/green] {len(carregado)} mensagens de {data} {hora}")
         except Exception as e:
             console.print(f"[yellow]Não foi possível carregar contexto:[/yellow] {e}")

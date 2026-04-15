@@ -33,6 +33,8 @@ def dispatch(comando: str, historico: list[dict]) -> str:
     if cmd == "/session":
         return _session(args)
 
+    return f"[red]Comando desconhecido:[/red] {cmd}. Use /help para ver os comandos."
+
 
 def _help() -> str:
     return (
