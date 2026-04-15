@@ -28,8 +28,11 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         if not args:
             return "[red]Uso:[/red] /hopen <model-id>"
         return f"[yellow]Próxima mensagem usará o modelo:[/yellow] {args}"
+    if cmd == "/hmem":
+        return _hmem(args)
     if cmd == "/session":
         return _session(args)
+    return f"[red]Comando desconhecido:[/red] {cmd}. Use /help para ver os comandos disponíveis."
 
 
 def _help() -> str:

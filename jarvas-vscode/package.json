@@ -1,23 +1,28 @@
 {
   "name": "jarvas-chat",
   "displayName": "Jarvas Chat",
+  "description": "Interface de chat para o Jarvas AI no VSCode",
   "version": "0.1.0",
+  "publisher": "jarvas",
   "engines": {"vscode": "^1.85.0"},
+  "categories": ["Other"],
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {"command": "jarvas.openChat", "title": "Jarvas: Open Chat"}
-    ],
-    "statusBarItems": [
-      {
-        "id": "jarvasChat",
-        "text": "$(robot) Jarvas",
-        "tooltip": "Open Jarvas Chat",
-        "command": "jarvas.openChat",
-        "alignment": "right",
-        "priority": 1000
-      }
     ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
   }
 }
