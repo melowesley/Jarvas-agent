@@ -1,5 +1,96 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as cp from 'child_process';
+
+let jarvasServerProcess: cp.ChildProcess | null = null;
+
+function findJarvasExecutable(): string {
+    // Tenta achar o jarvas no PATH ou em locais comuns do Python no Windows
+    const candidates = [
+        'jarvas',
+        'C:\\Users\\Computador\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\jarvas.exe',
+        process.env.LOCALAPPDATA + '\\Programs\\Python\\Python312\\Scripts\\jarvas.exe',
+        process.env.LOCALAPPDATA + '\\Programs\\Python\\Python311\\Scripts\\jarvas.exe',
+        (process.env.USERPROFILE ?? '') + '\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\jarvas.exe',
+        (process.env.USERPROFILE ?? '') + '\\.local\\bin\\jarvas',
+    ];
+    for (const c of candidates) {
+        try {
+            if (c !== 'jarvas') {
+                const fs = require('fs');
+                if (fs.existsSync(c)) return c;
+            }
+        } catch {}
+    }
+    return 'jarvas'; // fallback
+}
+
+async function isServerReady(): Promise<boolean> {
+    try {
+        const res = await fetch('http://localhost:8000/v1/agents', { signal: AbortSignal.timeout(2000) });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+function startJarvasServer(): cp.ChildProcess {
+    const exe = findJarvasExecutable();
+    const args = ['--managed'];
+
+    let proc: cp.ChildProcess;
+    try {
+        proc = cp.spawn(exe, args, {
+            shell: false,
+            detached: false,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: { ...process.env },
+        });
+    } catch (err: unknown) {
+        throw new Error(`Erro ao iniciar Jarvas: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    proc.on('exit', (code, signal) => {
+        jarvasServerProcess = null;
+        console.error(`Jarvas server exited with code=${code} signal=${signal}`);
+    });
+
+    proc.stdout?.on('data', (chunk) => {
+        const text = chunk.toString().trim();
+        if (text) console.log(`[Jarvas stdout] ${text}`);
+    });
+
+    proc.stderr?.on('data', (chunk) => {
+        const text = chunk.toString().trim();
+        if (text) console.error(`[Jarvas stderr] ${text}`);
+    });
+
+    return proc;
+}
+
+async function ensureServerReady(): Promise<void> {
+    if (await isServerReady()) return;
+
+    if (!jarvasServerProcess || jarvasServerProcess.exitCode !== null) {
+        jarvasServerProcess = startJarvasServer();
+    }
+
+    const maxWait = 30000; // 30s
+    const pollInterval = 2000; // 2s
+    let waited = 0;
+
+    while (waited < maxWait) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        waited += pollInterval;
+        if (await isServerReady()) return;
+
+        if (jarvasServerProcess?.exitCode !== null) {
+            throw new Error('O processo Jarvas terminou antes de ficar pronto');
+        }
+    }
+
+    throw new Error('Servidor não iniciou dentro de 30 segundos');
+}
 
 export class ChatPanel {
     static currentPanel: ChatPanel | undefined;
@@ -24,6 +115,13 @@ export class ChatPanel {
         this._panel = panel;
         this._panel.webview.html = this._getHtml(extensionUri);
         
+        this._panel.webview.postMessage({ type: 'status', msg: '⏳ Iniciando servidor Jarvas...' });
+        ensureServerReady().then(() => {
+            this._loadAgents();
+        }).catch((err) => {
+            this._panel.webview.postMessage({ type: 'error', msg: 'Falha ao iniciar servidor Jarvas: ' + err.message });
+        });
+        
         // Mensagens do Webview → extensão
         this._panel.webview.onDidReceiveMessage(async (msg) => {
             if (msg.type === 'send') await this._handleSend(msg.text, msg.agentId);
@@ -36,13 +134,14 @@ export class ChatPanel {
         });
     }
 
-    private async _loadAgents() {
+    private async _loadAgents(): Promise<void> {
         try {
             const res = await fetch('http://localhost:8000/v1/agents');
             const agents = await res.json();
             this._panel.webview.postMessage({ type: 'agents', agents });
         } catch (e) {
-            console.error(e);
+            const msg = e instanceof Error ? e.message : String(e);
+            this._panel.webview.postMessage({ type: 'error', msg: 'Erro ao carregar agentes: ' + msg });
         }
     }
 
@@ -50,10 +149,11 @@ export class ChatPanel {
         // Criar sessão se não existe ou agent mudou
         if (!this._sessionId || this._agentId !== agentId) {
             try {
+                const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
                 const res = await fetch('http://localhost:8000/v1/sessions', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ agent_id: agentId, title: 'VSCode Chat' })
+                    body: JSON.stringify({ agent_id: agentId, title: 'VSCode Chat', workspace_path: workspacePath })
                 });
                 const sess = await res.json();
                 this._sessionId = sess.id;
@@ -188,10 +288,11 @@ export class ChatPanel {
                     <span>Jarvas Chat</span>
                     <select id="agent-select"></select>
                 </header>
+                <div id="status-bar" class="status-connecting">⏳ Conectando...</div>
                 <div id="messages"></div>
                 <footer>
-                    <textarea id="input" placeholder="Mensagem..."></textarea>
-                    <button id="send">Enviar</button>
+                    <textarea id="input" placeholder="Mensagem..." disabled></textarea>
+                    <button id="send" disabled>Enviar</button>
                 </footer>
             </div>
             <script src="${scriptUri}"></script>

@@ -60,12 +60,14 @@ class SessionCreate(BaseModel):
     agent_id: str
     environment_id: str | None = None
     title: str | None = None
+    workspace_path: str | None = None
 
 class SessionRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     agent_id: str
     environment_id: str | None = None
     title: str | None = None
+    workspace_path: str | None = None
     status: Literal["idle", "running", "error"] = "idle"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

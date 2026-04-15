@@ -11,6 +11,7 @@ import os
 
 from jarvas.managed.startup import seed_preset_agents
 from jarvas.managed.router import managed_router
+from jarvas.routes.autoescola_router import autoescola_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -19,6 +20,7 @@ async def lifespan(app):
 
 app = FastAPI(title="Jarvas API", version="0.3.0", lifespan=lifespan)
 app.include_router(managed_router)
+app.include_router(autoescola_router)
 
 # Serve arquivos estáticos (chat UI)
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -52,6 +54,15 @@ async def chat_ui():
     if os.path.exists(html_path):
         return FileResponse(html_path)
     return HTMLResponse("<h1>Jarvas API</h1><p>static/chat.html não encontrado.</p>")
+
+
+@app.get("/autoescola", response_class=HTMLResponse)
+async def autoescola_ui():
+    """Serve a página da Autoescola Jarvas."""
+    html_path = os.path.join(_static_dir, "autoescola.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    return HTMLResponse("<h1>Autoescola Jarvas</h1><p>static/autoescola.html não encontrado.</p>")
 
 
 @app.get("/health")

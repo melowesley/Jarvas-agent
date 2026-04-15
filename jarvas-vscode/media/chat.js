@@ -1,30 +1,84 @@
 // chat.js - lógica do chat no Webview
-// @ts-check
 
+/* global acquireVsCodeApi */
 const vscode = acquireVsCodeApi();
-const agentSelect = document.getElementById('agent-select');
-const messagesDiv = document.getElementById('messages');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
 
-// Load agents on start
-vscode.postMessage({ type: 'loadAgents' });
+const agentSelect = /** @type {HTMLSelectElement} */ (document.getElementById('agent-select'));
+const messagesDiv = /** @type {HTMLElement} */ (document.getElementById('messages'));
+const input = /** @type {HTMLTextAreaElement} */ (document.getElementById('input'));
+const sendBtn = /** @type {HTMLButtonElement} */ (document.getElementById('send'));
+const statusBar = /** @type {HTMLElement} */ (document.getElementById('status-bar'));
 
-// Handle messages from extension
+let connected = false;
+
+// ── Conexão ──────────────────────────────────────────────────────────
+
+function tryConnect() {
+    statusBar.textContent = '⏳ Conectando ao servidor...';
+    statusBar.className = 'status-connecting';
+    vscode.postMessage({ type: 'loadAgents' });
+}
+
+function setConnected(agents) {
+    connected = true;
+    agentSelect.innerHTML = '';
+    agents.forEach(agent => {
+        const option = document.createElement('option');
+        option.value = agent.id;
+        option.textContent = agent.name;
+        agentSelect.appendChild(option);
+    });
+    statusBar.textContent = `✅ Conectado — ${agents.length} agente(s)`;
+    statusBar.className = 'status-ok';
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+}
+
+function setDisconnected(msg) {
+    connected = false;
+    input.disabled = true;
+    sendBtn.disabled = true;
+    statusBar.innerHTML = `⚠️ ${msg} &nbsp;<button id="retry-btn">Tentar novamente</button>`;
+    statusBar.className = 'status-error';
+    document.getElementById('retry-btn').addEventListener('click', tryConnect);
+}
+
+// Tenta conectar ao abrir
+tryConnect();
+
+// Timeout de 15s para mostrar erro se não conectar (servidor pode demorar para iniciar)
+let connectTimer = setTimeout(() => {
+    if (!connected) {
+        setDisconnected('Servidor não iniciou. Tente abrir um terminal e executar: jarvas --managed');
+    }
+}, 15000);
+
+// ── Mensagens da extensão ────────────────────────────────────────────
+
 window.addEventListener('message', event => {
     const msg = event.data;
+
     if (msg.type === 'agents') {
-        agentSelect.innerHTML = '';
-        msg.agents.forEach(agent => {
-            const option = document.createElement('option');
-            option.value = agent.id;
-            option.textContent = agent.name;
-            agentSelect.appendChild(option);
-        });
+        clearTimeout(connectTimer);
+        if (!msg.agents || msg.agents.length === 0) {
+            setDisconnected('Nenhum agente encontrado no servidor.');
+        } else {
+            setConnected(msg.agents);
+        }
+    } else if (msg.type === 'status') {
+        clearTimeout(connectTimer);
+        statusBar.textContent = msg.msg;
+        statusBar.className = 'status-connecting';
+    } else if (msg.type === 'error') {
+        clearTimeout(connectTimer);
+        setDisconnected(msg.msg || msg.message || 'Erro desconhecido');
     } else if (msg.type === 'event') {
         renderEvent(msg.event);
     }
 });
+
+// ── Envio ────────────────────────────────────────────────────────────
 
 function setLoading(loading) {
     sendBtn.disabled = loading;
@@ -42,18 +96,19 @@ input.addEventListener('keydown', e => {
 
 function sendMessage() {
     const text = input.value.trim();
-    if (!text || sendBtn.disabled) return;
+    if (!text || sendBtn.disabled || !connected) return;
 
     const agentId = agentSelect.value;
     if (!agentId) return;
 
-    // Show user message immediately
     appendMessage('user', text);
     input.value = '';
     setLoading(true);
 
     vscode.postMessage({ type: 'send', text, agentId });
 }
+
+// ── Renderização ─────────────────────────────────────────────────────
 
 function appendMessage(role, content) {
     const div = document.createElement('div');
@@ -84,7 +139,7 @@ function renderEvent(event) {
         div.className = `message message-tool-result${event.is_error ? ' message-error' : ''}`;
         const details = document.createElement('details');
         const summary = document.createElement('summary');
-        summary.textContent = event.is_error ? `❌ ${event.tool_name} error` : `✅ ${event.tool_name} result`;
+        summary.textContent = event.is_error ? `❌ ${event.tool_name}` : `✅ ${event.tool_name}`;
         const pre = document.createElement('pre');
         pre.textContent = event.output;
         details.appendChild(summary);

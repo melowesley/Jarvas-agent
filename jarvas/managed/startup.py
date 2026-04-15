@@ -22,7 +22,7 @@ PRESET_AGENTS = [
     },
     {
         "name": "gemma-local",
-        "model": "ollama/llama3.2:3b",
+        "model": "ollama/qwen2.5:7b-coder",
         "system_prompt": (
             "Você é Jarvas, um assistente de código com acesso direto ao VSCode. "
             "Use vscode_edit para modificar arquivos, vscode_open para abrir, "

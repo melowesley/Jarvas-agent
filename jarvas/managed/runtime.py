@@ -278,6 +278,14 @@ async def run_agent_loop(
     if skill_blocks:
         full_system += "\n\n---\n" + "\n\n".join(skill_blocks)
 
+    # Inject workspace path if session was created from VSCode
+    if session.workspace_path:
+        full_system += (
+            f"\n\n---\n## VSCode Workspace\n"
+            f"The user is working in the VSCode workspace at: `{session.workspace_path}`\n"
+            f"Use this path as the base for all file operations (read, write, bash, vscode_edit, vscode_list)."
+        )
+
     # Determine allowed tools from environment or agent config
     env_id = session.environment_id
     env = get_env(env_id) if env_id else None

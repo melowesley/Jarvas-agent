@@ -254,7 +254,33 @@ jarvas --managed
 
 O agente `gemma-local` roda inteiramente offline e pode editar arquivos no VSCode diretamente via ferramentas nativas (`vscode_edit`, `vscode_open`, `vscode_terminal`).
 
-### 4. API REST
+### 4. 🎓 Autoescola — Tutoriais Práticos Interativos
+
+Aprenda a "dirigir" o Jarvas através de 6 aulas progressivas e interativas:
+
+```bash
+jarvas --managed
+# Abra http://localhost:8000/autoescola no navegador
+```
+
+**Curriculum:**
+1. **Primeira Marcha** — Seu primeiro comando e roteamento automático
+2. **Trocando Marchas** — Combinando guardas `/g` e `/d`
+3. **Cruzamento Decisivo** — Debate multi-agente (`/debate`)
+4. **Estacionando Memorias** — Usando MemPalace (`/hmem`)
+5. **Piloto Automático** — Sessões gerenciadas (`/session`)
+6. **Rally Completo** — Workflow real: pesquisa + debate + memória + delegação
+
+Cada aula tem:
+- **Cenário**: Problema real que motiva o aprendizado
+- **Passos numerados**: Comandos exatos com explicações
+- **Diagrama visual**: Fluxo de dados pelo sistema
+- **Checkpoints**: Perguntas para testar entendimento
+- **Armadilhas**: Erros comuns a evitar
+
+O progresso é salvo automaticamente e você pode retomar de onde parou.
+
+### 5. API REST
 
 Com `--managed` ativo:
 

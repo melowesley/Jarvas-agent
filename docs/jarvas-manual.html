@@ -1,977 +1,1065 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jarvas — Manual de Instruções v0.4</title>
-  <style>
-    :root {
-      --bg: #0d1117;
-      --bg2: #161b22;
-      --bg3: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --text-dim: #8b949e;
-      --accent: #58a6ff;
-      --accent2: #3fb950;
-      --accent3: #d2a8ff;
-      --accent4: #ffa657;
-      --accent5: #f85149;
-      --accent6: #79c0ff;
-      --code-bg: #161b22;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvas - Manual Interativo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --text-light: #f1f5f9;
+            --text-muted: #cbd5e1;
+            --border: #334155;
+            --code-bg: #1e293b;
+        }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.65;
-      font-size: 15px;
-    }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+            color: var(--text-light);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
 
-    .layout { display: flex; min-height: 100vh; }
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
 
-    nav {
-      width: 270px;
-      min-width: 270px;
-      background: var(--bg2);
-      border-right: 1px solid var(--border);
-      padding: 24px 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-    }
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
 
-    nav .logo {
-      padding: 0 20px 20px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 16px;
-    }
-    nav .logo h2 { font-size: 1.2rem; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-    nav .logo span.version { font-size: 0.75rem; color: var(--text-dim); font-weight: 400; }
+        .sidebar-header {
+            padding: 0 1.5rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
 
-    nav ul { list-style: none; padding: 0 12px; }
-    nav ul li a {
-      display: block;
-      padding: 7px 12px;
-      border-radius: 6px;
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.15s;
-    }
-    nav ul li a:hover { background: var(--bg3); color: var(--text); }
-    nav ul li.section {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      padding: 14px 12px 4px;
-    }
-    nav ul li.new a { color: var(--accent2); }
+        .sidebar-logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
 
-    main { flex: 1; padding: 48px 56px; max-width: 920px; }
+        .sidebar-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
 
-    h1 { font-size: 2.2rem; color: var(--text); margin-bottom: 8px; }
-    h2 { font-size: 1.4rem; color: var(--text); margin: 48px 0 16px; padding-top: 8px; border-top: 1px solid var(--border); }
-    h3 { font-size: 1.1rem; color: var(--accent3); margin: 28px 0 10px; }
-    h4 { font-size: 0.95rem; color: var(--accent4); margin: 20px 0 8px; }
-    p { color: var(--text); margin-bottom: 12px; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+        .sidebar-nav {
+            list-style: none;
+        }
 
-    .subtitle { color: var(--text-dim); font-size: 1.05rem; margin-bottom: 32px; }
+        .sidebar-nav li {
+            margin: 0.25rem 0;
+        }
 
-    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
-    .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; border: 1px solid; }
-    .badge-green  { color: var(--accent2); border-color: var(--accent2); background: rgba(63,185,80,.1); }
-    .badge-blue   { color: var(--accent);  border-color: var(--accent);  background: rgba(88,166,255,.1); }
-    .badge-purple { color: var(--accent3); border-color: var(--accent3); background: rgba(210,168,255,.1); }
-    .badge-orange { color: var(--accent4); border-color: var(--accent4); background: rgba(255,166,87,.1); }
-    .badge-red    { color: var(--accent5); border-color: var(--accent5); background: rgba(248,81,73,.1); }
+        .sidebar-nav a {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
 
-    code {
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 0.875em;
-      background: var(--bg3);
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: var(--accent3);
-    }
+        .sidebar-nav a:hover {
+            color: var(--text-light);
+            background: rgba(99, 102, 241, 0.1);
+            border-left-color: var(--primary);
+        }
 
-    pre {
-      background: var(--code-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 20px;
-      overflow-x: auto;
-      margin: 12px 0 20px;
-      position: relative;
-    }
-    pre code { background: transparent; padding: 0; color: var(--text); font-size: 0.85rem; line-height: 1.7; }
-    .pre-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+        .sidebar-nav a.active {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.15);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
 
-    .cmd-table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; }
-    .cmd-table th { text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    .cmd-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    .cmd-table tr:last-child td { border-bottom: none; }
-    .cmd-table tr:hover td { background: var(--bg3); }
-    .cmd-table td:first-child { width: 36%; }
-    .cmd-table code { white-space: nowrap; }
-    .cmd-desc { color: var(--text-dim); font-size: 0.875rem; }
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 3rem;
+        }
 
-    .api-table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 0.875rem; }
-    .api-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); padding: 8px 10px; border-bottom: 1px solid var(--border); }
-    .api-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    .api-table tr:last-child td { border-bottom: none; }
-    .api-table tr:hover td { background: var(--bg3); }
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
 
-    .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; font-family: monospace; min-width: 56px; text-align: center; }
-    .method-get    { background: rgba(63,185,80,.15);  color: #3fb950; }
-    .method-post   { background: rgba(88,166,255,.15); color: #58a6ff; }
-    .method-patch  { background: rgba(255,166,87,.15); color: #ffa657; }
-    .method-delete { background: rgba(248,81,73,.15);  color: #f85149; }
+        .section.active {
+            display: block;
+        }
 
-    .callout { padding: 14px 18px; border-radius: 8px; margin: 20px 0; border-left: 3px solid; font-size: 0.9rem; }
-    .callout-info    { background: rgba(88,166,255,.07);  border-color: var(--accent);  }
-    .callout-warning { background: rgba(255,166,87,.07);  border-color: var(--accent4); }
-    .callout-tip     { background: rgba(63,185,80,.07);   border-color: var(--accent2); }
-    .callout-title   { font-weight: 700; margin-bottom: 4px; }
-    .callout-info    .callout-title { color: var(--accent);  }
-    .callout-warning .callout-title { color: var(--accent4); }
-    .callout-tip     .callout-title { color: var(--accent2); }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-    .arch { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0 28px; }
-    .arch-node { flex: 1; min-width: 130px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
-    .arch-node .icon { font-size: 1.8rem; margin-bottom: 6px; }
-    .arch-node .label { font-weight: 600; font-size: 0.9rem; }
-    .arch-node .sublabel { font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
-    .arch-arrow { display: flex; align-items: center; color: var(--text-dim); font-size: 1.4rem; padding-top: 20px; }
-    .arch-node.highlight { border-color: var(--accent2); background: rgba(63,185,80,.06); }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-    .steps { counter-reset: step-counter; list-style: none; padding: 0; }
-    .steps li { counter-increment: step-counter; position: relative; padding: 0 0 24px 52px; }
-    .steps li::before { content: counter(step-counter); position: absolute; left: 0; top: 0; width: 32px; height: 32px; background: var(--accent); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; }
-    .steps li:not(:last-child)::after { content: ''; position: absolute; left: 15px; top: 32px; width: 2px; height: calc(100% - 32px); background: var(--border); }
-    .steps li strong { display: block; margin-bottom: 4px; font-size: 0.95rem; }
+        h2 {
+            font-size: 2rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-light);
+        }
 
-    .env-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-    .env-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    .env-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
-    .env-table tr:last-child td { border-bottom: none; }
-    .required { color: var(--accent5); font-size: 0.72rem; font-weight: 700; }
-    .optional-tag { color: var(--text-dim); font-size: 0.72rem; }
+        h3 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--primary);
+        }
 
-    .event-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 24px; }
-    .event-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-    .event-type { font-family: monospace; font-size: 0.82rem; color: var(--accent6); font-weight: 600; }
-    .event-desc { font-size: 0.82rem; color: var(--text-dim); margin-top: 4px; }
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+            line-height: 1.8;
+        }
 
-    .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
-    .flow-item { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 0.82rem; font-family: monospace; }
-    .flow-arrow { color: var(--text-dim); font-size: 1rem; }
+        .intro-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.9;
+        }
 
-    .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 24px; }
-    .tool-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-    .tool-card .tool-name { font-family: monospace; font-size: 0.9rem; color: var(--accent4); font-weight: 700; margin-bottom: 4px; }
-    .tool-card .tool-desc { font-size: 0.82rem; color: var(--text-dim); }
-    .tool-card .tool-params { font-size: 0.78rem; color: var(--accent3); margin-top: 6px; }
-    .tool-card.vscode { border-color: rgba(63,185,80,.4); background: rgba(63,185,80,.04); }
+        /* Cards */
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
 
-    hr.section-divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+        }
 
-    .new-badge { display: inline-block; background: rgba(63,185,80,.15); color: var(--accent2); border: 1px solid var(--accent2); border-radius: 4px; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; margin-left: 6px; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+        }
 
-    footer { text-align: center; padding: 40px 0 60px; color: var(--text-dim); font-size: 0.8rem; }
-  </style>
+        /* Code Blocks */
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.3rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #a1d391;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #a1d391;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .code-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--secondary);
+            transform: scale(1.05);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(99, 102, 241, 0.15);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Accordion */
+        .accordion-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            padding: 1rem 1.5rem;
+            background: rgba(99, 102, 241, 0.08);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .accordion-header:hover {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .accordion-header.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .accordion-content.active {
+            display: block;
+        }
+
+        .toggle-icon {
+            transition: transform 0.2s;
+            font-size: 1.2rem;
+        }
+
+        .accordion-header.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag.warning {
+            background: rgba(236, 72, 153, 0.2);
+            color: var(--accent);
+        }
+
+        .tag.success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        /* Search */
+        .search-box {
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--border);
+            color: var(--text-light);
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1rem 0;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .sidebar-nav {
+                display: flex;
+                flex-wrap: wrap;
+            }
+
+            .sidebar-nav li {
+                flex: 1;
+                min-width: 150px;
+            }
+
+            .sidebar-nav a {
+                border-left: none;
+                border-bottom: 2px solid transparent;
+                padding: 0.5rem 1rem;
+            }
+
+            .sidebar-nav a:hover,
+            .sidebar-nav a.active {
+                border-bottom-color: var(--primary);
+                border-left: none;
+            }
+        }
+
+        /* Utility Classes */
+        .highlight {
+            background: rgba(236, 72, 153, 0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.2rem;
+            color: var(--accent);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+        }
+
+        .note {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning {
+            background: rgba(236, 72, 153, 0.1);
+            border-left: 3px solid var(--accent);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid #22c55e;
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-<div class="layout">
-
-  <!-- ── Sidebar ── -->
-  <nav>
-    <div class="logo">
-      <h2>🤖 Jarvas <span class="version">v0.4.0</span></h2>
-    </div>
-    <ul>
-      <li class="section">Início</li>
-      <li><a href="#overview">Visão Geral</a></li>
-      <li><a href="#install">Instalação</a></li>
-      <li><a href="#env">Variáveis de Ambiente</a></li>
-
-      <li class="section">Agente Local (Ollama)</li>
-      <li class="new"><a href="#ollama-install">Instalar Ollama</a></li>
-      <li class="new"><a href="#ollama-model">Baixar Gemma 4</a></li>
-      <li class="new"><a href="#gemma-agent">Agente gemma-local</a></li>
-      <li class="new"><a href="#vscode-tools">Ferramentas VSCode</a></li>
-
-      <li class="section">CLI — REPL</li>
-      <li><a href="#repl">Modo Interativo</a></li>
-      <li><a href="#cmd-g">Guarda Gemini /g</a></li>
-      <li><a href="#cmd-d">Guarda DeepSeek /d</a></li>
-      <li><a href="#cmd-debate">Debate /debate</a></li>
-      <li><a href="#cmd-hmem">MemPalace /hmem</a></li>
-
-      <li class="section">Managed Agents</li>
-      <li><a href="#managed-start">Iniciar Servidor</a></li>
-      <li><a href="#cmd-session">Comando /session</a></li>
-      <li><a href="#api-agents">API — Agents</a></li>
-      <li><a href="#api-skills">API — Skills</a></li>
-      <li><a href="#api-envs">API — Environments</a></li>
-      <li><a href="#api-sessions">API — Sessions</a></li>
-      <li><a href="#sse-events">Eventos SSE</a></li>
-
-      <li class="section">Extensão VSCode</li>
-      <li><a href="#vscode-install">Instalar Extensão</a></li>
-      <li><a href="#vscode-use">Usar o Chat</a></li>
-
-      <li class="section">Referência</li>
-      <li><a href="#arch">Arquitetura</a></li>
-      <li><a href="#agents-preset">Agentes Pré-configurados</a></li>
-      <li><a href="#troubleshoot">Solução de Problemas</a></li>
-    </ul>
-  </nav>
-
-  <!-- ── Main ── -->
-  <main>
-
-    <h1>Jarvas</h1>
-    <p class="subtitle">Manual de instruções — assistente de IA distribuído com Managed Agents e suporte a modelos locais via Ollama</p>
-
-    <div class="badges">
-      <span class="badge badge-green">Python 3.11+</span>
-      <span class="badge badge-blue">FastAPI</span>
-      <span class="badge badge-purple">OpenRouter</span>
-      <span class="badge badge-orange">Gemini SDK</span>
-      <span class="badge badge-blue">VSCode Extension</span>
-      <span class="badge badge-green">Ollama / Gemma 4</span>
-    </div>
-
-    <!-- ── Visão Geral ── -->
-    <h2 id="overview">Visão Geral</h2>
-
-    <p>O Jarvas é um assistente de IA local com múltiplos agentes especializados. Pode ser usado como REPL interativo no terminal ou como servidor de API com Managed Agents compatível com o padrão Anthropic.</p>
-    <p>Com a versão 0.4, o Jarvas agora inclui o agente <strong>gemma-local</strong> que roda <em>completamente offline</em> via <strong>Ollama</strong>, com ferramentas nativas do VSCode — podendo abrir, editar e criar qualquer arquivo do workspace diretamente pelo chat.</p>
-
-    <h3>Diagrama de fluxo — Agente Local</h3>
-    <div class="arch">
-      <div class="arch-node highlight">
-        <div class="icon">🖥️</div>
-        <div class="label">VSCode Chat</div>
-        <div class="sublabel">Extensão Jarvas</div>
-      </div>
-      <div class="arch-arrow">⇄</div>
-      <div class="arch-node">
-        <div class="icon">⚡</div>
-        <div class="label">FastAPI :8000</div>
-        <div class="sublabel">Managed Agents</div>
-      </div>
-      <div class="arch-arrow">→</div>
-      <div class="arch-node highlight">
-        <div class="icon">🦙</div>
-        <div class="label">Ollama :11434</div>
-        <div class="sublabel">Gemma 4 local</div>
-      </div>
-    </div>
-    <div class="arch">
-      <div class="arch-node">
-        <div class="icon">🔧</div>
-        <div class="label">Tools Server</div>
-        <div class="sublabel">bash, read, web_search</div>
-      </div>
-      <div class="arch-arrow">+</div>
-      <div class="arch-node highlight">
-        <div class="icon">📝</div>
-        <div class="label">Tools VSCode</div>
-        <div class="sublabel">vscode_edit, vscode_open…</div>
-      </div>
-    </div>
-
-    <h3>Modos de operação</h3>
-    <table class="cmd-table">
-      <thead><tr><th>Modo</th><th>Comando</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><code>CLI / REPL</code></td><td><code>jarvas</code></td><td class="cmd-desc">Terminal interativo com guardas Gemini, DeepSeek e debate multi-agente</td></tr>
-        <tr><td><code>Servidor API</code></td><td><code>jarvas --managed</code></td><td class="cmd-desc">FastAPI em localhost:8000 com todos os endpoints de Managed Agents</td></tr>
-        <tr><td><code>VSCode Chat</code></td><td>Botão na status bar</td><td class="cmd-desc">Painel de chat conectado ao servidor, com suporte a edição de arquivos</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ── Instalação ── -->
-    <h2 id="install">Instalação</h2>
-
-    <ol class="steps">
-      <li>
-        <strong>Clonar / baixar o projeto</strong>
-        <pre><code>cd Desktop
-git clone &lt;repositório&gt; jarvas
-cd jarvas</code></pre>
-      </li>
-      <li>
-        <strong>Criar e ativar o ambiente virtual</strong>
-        <pre><code>python -m venv .venv
-# Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# Windows CMD:
-.venv\Scripts\activate.bat
-# Linux / macOS:
-source .venv/bin/activate</code></pre>
-      </li>
-      <li>
-        <strong>Instalar dependências</strong>
-        <pre><code>pip install -e .</code></pre>
-      </li>
-      <li>
-        <strong>Configurar variáveis de ambiente</strong>
-        <p>Crie um arquivo <code>.env</code> na raiz do projeto (veja seção <a href="#env">Variáveis de Ambiente</a>).</p>
-      </li>
-      <li>
-        <strong>Testar a instalação</strong>
-        <pre><code>jarvas --help</code></pre>
-      </li>
-    </ol>
-
-    <!-- ── Variáveis de Ambiente ── -->
-    <h2 id="env">Variáveis de Ambiente</h2>
-
-    <p>Crie o arquivo <code>.env</code> na raiz do projeto:</p>
-    <div class="pre-label">.env</div>
-    <pre><code># Obrigatório para modelos via OpenRouter (Hermes, DeepSeek)
-OPENROUTER_API_KEY=sk-or-...
-
-# Obrigatório para Gemini Guard e busca web
-GEMINI_API_KEY=AIza...
-
-# Supabase (opcional — para persistência externa)
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_KEY=eyJ...
-
-# Ollama roda localmente — sem API key necessária</code></pre>
-
-    <table class="env-table">
-      <thead><tr><th>Variável</th><th>Usado por</th><th>Obrigatoriedade</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>OPENROUTER_API_KEY</code></td>
-          <td>Hermes, DeepSeek Guard, qualquer modelo OpenRouter</td>
-          <td><span class="required">OBRIGATÓRIO</span> se usar esses modelos</td>
-        </tr>
-        <tr>
-          <td><code>GEMINI_API_KEY</code></td>
-          <td>Gemini Guard, web_search em todos os agentes</td>
-          <td><span class="required">OBRIGATÓRIO</span> se usar Gemini ou web_search</td>
-        </tr>
-        <tr>
-          <td><code>SUPABASE_URL</code></td>
-          <td>Persistência de sessões e memórias</td>
-          <td><span class="optional-tag">OPCIONAL</span></td>
-        </tr>
-        <tr>
-          <td><code>SUPABASE_KEY</code></td>
-          <td>Autenticação Supabase</td>
-          <td><span class="optional-tag">OPCIONAL</span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="callout callout-tip">
-      <div class="callout-title">✅ Modo 100% offline</div>
-      Para usar apenas o agente <strong>gemma-local</strong> via Ollama, você não precisa de <em>nenhuma</em> API key. Instale o Ollama, baixe o modelo e inicie o servidor — tudo roda localmente.
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- NOVA SEÇÃO: OLLAMA -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <h2 id="ollama-install">Instalar Ollama <span class="new-badge">Novo</span></h2>
-
-    <p>O <strong>Ollama</strong> é o runtime que baixa e executa modelos de linguagem localmente. Ele expõe uma API compatível com OpenAI em <code>localhost:11434</code>.</p>
-
-    <h3>Windows</h3>
-    <pre><code># Via winget (recomendado)
-winget install Ollama.Ollama
-
-# Após instalar, verificar se está rodando:
-curl http://localhost:11434/api/tags</code></pre>
-
-    <h3>Linux / macOS</h3>
-    <pre><code>curl -fsSL https://ollama.com/install.sh | sh</code></pre>
-
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Ollama como serviço</div>
-      No Windows, o Ollama é instalado como serviço e inicia automaticamente com o sistema. No Linux/macOS, use <code>ollama serve</code> para iniciar manualmente.
-    </div>
-
-    <!-- ── Baixar Gemma 4 ── -->
-    <h2 id="ollama-model">Baixar Gemma 4 <span class="new-badge">Novo</span></h2>
-
-    <p>O Jarvas usa <strong>Gemma 4</strong> por padrão. Escolha a variante conforme sua memória de GPU (VRAM):</p>
-
-    <table class="cmd-table">
-      <thead><tr><th>Modelo</th><th>VRAM mínima</th><th>Comando</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>gemma4</code> (12B Q4)</td>
-          <td>8 GB</td>
-          <td><code>ollama pull gemma4</code></td>
-        </tr>
-        <tr>
-          <td><code>gemma3:27b</code></td>
-          <td>16 GB</td>
-          <td><code>ollama pull gemma3:27b</code></td>
-        </tr>
-        <tr>
-          <td><code>gemma3:4b</code> (leve)</td>
-          <td>4 GB (ou só CPU)</td>
-          <td><code>ollama pull gemma3:4b</code></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <pre><code># Baixar o modelo padrão
-ollama pull gemma4
-
-# Listar modelos instalados
-ollama list
-
-# Testar interativamente
-ollama run gemma4 "Olá, você consegue me ajudar com Python?"</code></pre>
-
-    <div class="callout callout-warning">
-      <div class="callout-title">⚠️ Uso sem GPU</div>
-      Se não tiver GPU dedicada, o modelo roda na CPU — muito mais lento. Recomendamos <code>gemma3:4b</code> para CPUs. O download pode demorar: o Gemma 4 (12B) tem ~8 GB.
-    </div>
-
-    <h3>Usar outro modelo no Jarvas</h3>
-    <p>Ao criar ou atualizar um agente via API, defina o campo <code>model</code> com o prefixo <code>ollama/</code>:</p>
-    <pre><code># Exemplos de model IDs suportados
-"ollama/gemma4"
-"ollama/gemma3:27b"
-"ollama/llama3.2"
-"ollama/mistral"
-"ollama/phi4"</code></pre>
-
-    <!-- ── Agente gemma-local ── -->
-    <h2 id="gemma-agent">Agente gemma-local <span class="new-badge">Novo</span></h2>
-
-    <p>O agente <strong>gemma-local</strong> é pré-registrado automaticamente quando o servidor inicia. Ele é o único agente com acesso às ferramentas nativas do VSCode.</p>
-
-    <h3>Iniciar tudo (ordem correta)</h3>
-    <ol class="steps">
-      <li>
-        <strong>Garantir que o Ollama está rodando</strong>
-        <pre><code># Windows: já roda como serviço após instalação
-# Linux/macOS:
-ollama serve
-
-# Verificar:
-curl http://localhost:11434/api/tags</code></pre>
-      </li>
-      <li>
-        <strong>Iniciar o servidor Jarvas</strong>
-        <pre><code>jarvas --managed
-# Servidor disponível em http://localhost:8000</code></pre>
-      </li>
-      <li>
-        <strong>Verificar agentes disponíveis</strong>
-        <pre><code>curl http://localhost:8000/v1/agents
-# Deve retornar: hermes, gemini-guard, deepseek-guard, gemma-local</code></pre>
-      </li>
-      <li>
-        <strong>Abrir o VSCode e usar o chat</strong>
-        <p>Clique no botão <code>🤖 Jarvas</code> na barra de status inferior direita do VSCode. Selecione <strong>gemma-local</strong> no dropdown e comece a conversar.</p>
-      </li>
-    </ol>
-
-    <!-- ── Ferramentas VSCode ── -->
-    <h2 id="vscode-tools">Ferramentas Nativas do VSCode <span class="new-badge">Novo</span></h2>
-
-    <p>Quando o agente <strong>gemma-local</strong> (ou qualquer agente com essas tools configuradas) precisa interagir com o VSCode, a extensão executa a operação diretamente usando a API do VSCode e devolve o resultado ao agente. O servidor FastAPI <em>pausa</em> o loop e aguarda a resposta da extensão por até 60 segundos.</p>
-
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Como funciona o split tool execution</div>
-      Ferramentas como <code>bash</code>, <code>read</code> e <code>web_search</code> rodam no servidor Python. Ferramentas <code>vscode_*</code> são delegadas à extensão VSCode via SSE — a extensão executa e devolve o resultado via <code>POST /v1/sessions/{id}/tool_result</code>.
-    </div>
-
-    <div class="tool-grid">
-      <div class="tool-card vscode">
-        <div class="tool-name">vscode_open</div>
-        <div class="tool-desc">Abre um arquivo no editor (nova aba)</div>
-        <div class="tool-params">path: string</div>
-      </div>
-      <div class="tool-card vscode">
-        <div class="tool-name">vscode_edit</div>
-        <div class="tool-desc">Edita um arquivo substituindo old_text por new_text (primeira ocorrência)</div>
-        <div class="tool-params">path, old_text, new_text: string</div>
-      </div>
-      <div class="tool-card vscode">
-        <div class="tool-name">vscode_terminal</div>
-        <div class="tool-desc">Envia um comando para o terminal integrado do VSCode</div>
-        <div class="tool-params">command: string</div>
-      </div>
-      <div class="tool-card vscode">
-        <div class="tool-name">vscode_list</div>
-        <div class="tool-desc">Lista arquivos do workspace por padrão glob (máx 200)</div>
-        <div class="tool-params">pattern?: string (ex: **/*.py)</div>
-      </div>
-    </div>
-
-    <h3>Também disponíveis para todos os agentes</h3>
-    <div class="tool-grid">
-      <div class="tool-card">
-        <div class="tool-name">bash</div>
-        <div class="tool-desc">Executa comando shell no servidor (timeout 30s)</div>
-        <div class="tool-params">command: string</div>
-      </div>
-      <div class="tool-card">
-        <div class="tool-name">read</div>
-        <div class="tool-desc">Lê conteúdo de arquivo no servidor (máx 50KB)</div>
-        <div class="tool-params">path: string</div>
-      </div>
-      <div class="tool-card">
-        <div class="tool-name">write</div>
-        <div class="tool-desc">Escreve arquivo no servidor</div>
-        <div class="tool-params">path, content: string</div>
-      </div>
-      <div class="tool-card">
-        <div class="tool-name">web_search</div>
-        <div class="tool-desc">Busca na web via Gemini (requer GEMINI_API_KEY)</div>
-        <div class="tool-params">query: string</div>
-      </div>
-    </div>
-
-    <h3>Exemplo de conversa com gemma-local</h3>
-    <div class="callout callout-tip">
-      <div class="callout-title">💬 No chat do VSCode, com gemma-local selecionado:</div>
-      <p style="margin-top:8px"><strong>Você:</strong> "Abra o arquivo jarvas/managed/runtime.py e me mostre as funções de dispatch"</p>
-      <p style="margin-top:6px;color:var(--text-dim)">→ Gemma usa <code>vscode_open</code> → arquivo abre na aba ao lado</p>
-      <p style="margin-top:6px"><strong>Você:</strong> "Adicione um log no início de _call_ollama_async que imprime o model name"</p>
-      <p style="margin-top:6px;color:var(--text-dim)">→ Gemma usa <code>read</code> para ver o conteúdo atual, depois <code>vscode_edit</code> para aplicar a mudança</p>
-    </div>
-
-    <hr class="section-divider">
-
-    <!-- ── REPL ── -->
-    <h2 id="repl">Modo Interativo (REPL)</h2>
-
-    <p>Execute <code>jarvas</code> sem argumentos para entrar no REPL. Digite sua mensagem ou use um comando com <code>/</code>.</p>
-    <pre><code>jarvas</code></pre>
-
-    <h3>Comandos disponíveis no REPL</h3>
-    <table class="cmd-table">
-      <thead><tr><th>Comando</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><code>/g &lt;mensagem&gt;</code></td><td class="cmd-desc">Pergunta ao Guarda Gemini (gemini-2.5-flash)</td></tr>
-        <tr><td><code>/d &lt;mensagem&gt;</code></td><td class="cmd-desc">Pergunta ao Guarda DeepSeek (via OpenRouter)</td></tr>
-        <tr><td><code>/debate &lt;tema&gt;</code></td><td class="cmd-desc">Debate multi-agente: Gemini vs DeepSeek, mediado pelo orquestrador</td></tr>
-        <tr><td><code>/hopen</code></td><td class="cmd-desc">Abre uma nova conversa com o Hermes (reseta contexto)</td></tr>
-        <tr><td><code>/hmem &lt;texto&gt;</code></td><td class="cmd-desc">Salva memória no MemPalace para o Hermes</td></tr>
-        <tr><td><code>/session &lt;subcomando&gt;</code></td><td class="cmd-desc">Gerencia sessões de Managed Agents (veja abaixo)</td></tr>
-        <tr><td><code>/help</code></td><td class="cmd-desc">Lista todos os comandos disponíveis</td></tr>
-        <tr><td><code>/exit</code> ou <code>Ctrl+C</code></td><td class="cmd-desc">Encerra o REPL</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ── /g ── -->
-    <h2 id="cmd-g">Guarda Gemini — <code>/g</code></h2>
-    <p>Acessa o modelo <strong>gemini-2.5-flash</strong> diretamente via Google Generative AI SDK. Suporta busca na web integrada.</p>
-    <pre><code>/g O que é o padrão Managed Agents da Anthropic?
-/g pesquise as últimas novidades sobre Ollama</code></pre>
-    <div class="callout callout-warning">
-      <div class="callout-title">⚠️ Requer</div>
-      <code>GEMINI_API_KEY</code> configurada no <code>.env</code>
-    </div>
-
-    <!-- ── /d ── -->
-    <h2 id="cmd-d">Guarda DeepSeek — <code>/d</code></h2>
-    <p>Acessa o modelo <strong>DeepSeek Chat</strong> via OpenRouter. Excelente para raciocínio técnico e código.</p>
-    <pre><code>/d explique como funciona asyncio.Event no Python
-/d revise este código: def foo(): pass</code></pre>
-
-    <!-- ── /debate ── -->
-    <h2 id="cmd-debate">Debate Multi-Agente — <code>/debate</code></h2>
-    <p>Inicia um debate estruturado entre Gemini e DeepSeek. O orquestrador apresenta a questão, coleta as perspectivas e sintetiza as conclusões.</p>
-    <pre><code>/debate Qual é a melhor forma de estruturar uma API REST em Python?
-/debate Vale mais a pena usar SQL ou NoSQL para um app de notas?</code></pre>
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Fluxo do debate</div>
-      Orquestrador → Gemini (perspectiva A) → DeepSeek (perspectiva B) → Orquestrador (síntese)
-    </div>
-
-    <!-- ── /hmem ── -->
-    <h2 id="cmd-hmem">MemPalace — <code>/hmem</code></h2>
-    <p>Salva e recupera memórias persistentes para o agente Hermes. As memórias são armazenadas no MemPalace e injetadas no contexto das conversas futuras.</p>
-    <pre><code># Salvar memória
-/hmem O projeto usa Python 3.11 e FastAPI como backend principal
-
-# Listar memórias
-/hmem list
-
-# Buscar por contexto
-/hmem search arquitetura</code></pre>
-
-    <hr class="section-divider">
-
-    <!-- ── Managed Agents ── -->
-    <h2 id="managed-start">Iniciar o Servidor de Managed Agents</h2>
-
-    <pre><code>jarvas --managed</code></pre>
-
-    <p>O servidor FastAPI sobe em <code>http://localhost:8000</code>. Documentação Swagger disponível em <code>http://localhost:8000/docs</code>.</p>
-    
-    <h3>Porta personalizada</h3>
-    <pre><code>jarvas --managed --port 3000</code></pre>
-    <p>Muda a porta do servidor para 3000 (ou qualquer outro valor que você escolher).</p>
-
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Portas personalizadas</div>
-      <p>Você pode usar qualquer porta disponível entre 1024 e 65535. Isso é útil quando:</p>
-      <ul style="padding-left:18px;margin-top:6px;color:var(--text-dim);font-size:0.875rem">
-        <li>A porta padrão 8000 já está em uso por outro serviço</li>
-        <li>Seu firewall ou rede corporativa bloqueia a porta 8000</li>
-        <li>Você quer executar múltiplas instâncias do Jarvas simultaneamente</li>
-        <li>Quer manter projetos organizados em portas específicas</li>
-      </ul>
-    </div>
-    
-    <div class="callout callout-tip">
-      <div class="callout-title">✅ Verificar portas em uso</div>
-      <p>Para verificar se uma porta já está sendo usada:</p>
-      <pre style="margin-top:8px"><code># Windows
-netstat -ano | findstr :8000
-
-# Linux / macOS
-lsof -i :8000</code></pre>
-    </div>
-
-    <p>Na inicialização, os seguintes agentes são criados automaticamente:</p>
-    <table class="cmd-table">
-      <thead><tr><th>Nome</th><th>Modelo</th><th>Tools</th></tr></thead>
-      <tbody>
-        <tr><td><code>hermes</code></td><td>nousresearch/hermes-3-llama-3.1-70b</td><td class="cmd-desc">bash, write, read, web_search + callable: gemini-guard, deepseek-guard</td></tr>
-        <tr><td><code>gemini-guard</code></td><td>gemini-2.5-flash</td><td class="cmd-desc">web_search, read</td></tr>
-        <tr><td><code>deepseek-guard</code></td><td>deepseek/deepseek-chat</td><td class="cmd-desc">read, write</td></tr>
-        <tr><td><code>gemma-local</code> <span class="new-badge">Novo</span></td><td>ollama/gemma4 (local)</td><td class="cmd-desc">read, web_search, vscode_open, vscode_edit, vscode_terminal, vscode_list</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ── /session ── -->
-    <h2 id="cmd-session">Comando <code>/session</code> no REPL</h2>
-
-    <table class="cmd-table">
-      <thead><tr><th>Subcomando</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><code>/session list</code></td><td class="cmd-desc">Lista os agentes disponíveis no servidor</td></tr>
-        <tr><td><code>/session new &lt;nome&gt;</code></td><td class="cmd-desc">Cria nova sessão com o agente especificado</td></tr>
-        <tr><td><code>/session send &lt;id&gt; &lt;msg&gt;</code></td><td class="cmd-desc">Envia mensagem e exibe resposta em stream</td></tr>
-        <tr><td><code>/session history &lt;id&gt;</code></td><td class="cmd-desc">Exibe histórico de eventos de uma sessão</td></tr>
-      </tbody>
-    </table>
-
-    <pre><code>/session list
-/session new gemma-local
-/session send abc123 "Liste todos os arquivos Python do projeto"</code></pre>
-
-    <!-- ── API Agents ── -->
-    <h2 id="api-agents">API — Agents</h2>
-
-    <table class="api-table">
-      <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/agents</code></td><td>Criar novo agente</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/agents</code></td><td>Listar agentes (<code>?include_archived=true</code>)</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/agents/{id}</code></td><td>Buscar agente por ID</td></tr>
-        <tr><td><span class="method method-patch">PATCH</span></td><td><code>/v1/agents/{id}</code></td><td>Atualizar agente (requer campo <code>version</code> — otimistic lock)</td></tr>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/agents/{id}/archive</code></td><td>Arquivar agente</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/agents/{id}/versions</code></td><td>Histórico de versões do agente</td></tr>
-      </tbody>
-    </table>
-
-    <h4>Criar agente com Ollama</h4>
-    <pre><code>curl -X POST http://localhost:8000/v1/agents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "meu-agente-local",
-    "model": "ollama/gemma4",
-    "system_prompt": "Você é um assistente de código especializado em Python.",
-    "tools": ["read", "bash", "vscode_open", "vscode_edit"]
-  }'</code></pre>
-
-    <h4>Atualizar agente (com version check)</h4>
-    <pre><code>curl -X PATCH http://localhost:8000/v1/agents/&lt;ID&gt; \
-  -H "Content-Type: application/json" \
-  -d '{
-    "version": 1,
-    "tools": ["read", "web_search", "vscode_edit"]
-  }'
-# Retorna 409 se version não coincidir com a atual</code></pre>
-
-    <!-- ── API Skills ── -->
-    <h2 id="api-skills">API — Skills</h2>
-
-    <p>Skills são blocos de contexto de domínio injetados no system prompt do agente. Use para especializar o comportamento sem criar um agente novo.</p>
-
-    <table class="api-table">
-      <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/skills</code></td><td>Criar skill</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/skills</code></td><td>Listar skills</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/skills/{id}</code></td><td>Buscar skill por ID</td></tr>
-        <tr><td><span class="method method-delete">DELETE</span></td><td><code>/v1/skills/{id}</code></td><td>Remover skill</td></tr>
-      </tbody>
-    </table>
-
-    <pre><code>curl -X POST http://localhost:8000/v1/skills \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "python-expert",
-    "description": "Especialização em Python moderno",
-    "content": "Sempre use type hints. Prefira dataclasses a dicts. Use async/await para I/O."
-  }'</code></pre>
-
-    <!-- ── API Environments ── -->
-    <h2 id="api-envs">API — Environments</h2>
-
-    <p>Environments restringem quais tools um agente pode usar em uma sessão específica.</p>
-
-    <table class="api-table">
-      <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/environments</code></td><td>Criar environment</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/environments</code></td><td>Listar environments</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/environments/{id}</code></td><td>Buscar environment por ID</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ── API Sessions ── -->
-    <h2 id="api-sessions">API — Sessions</h2>
-
-    <table class="api-table">
-      <thead><tr><th>Método</th><th>Endpoint</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/sessions</code></td><td>Criar sessão (retorna ID)</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/sessions/{id}</code></td><td>Estado atual da sessão</td></tr>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/sessions/{id}/events</code></td><td>Enviar mensagem (202 Accepted — async)</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/sessions/{id}/stream</code></td><td>SSE stream de eventos em tempo real</td></tr>
-        <tr><td><span class="method method-get">GET</span></td><td><code>/v1/sessions/{id}/events</code></td><td>Replay de todos os eventos da sessão</td></tr>
-        <tr><td><span class="method method-post">POST</span></td><td><code>/v1/sessions/{id}/tool_result</code> <span class="new-badge">Novo</span></td><td>Callback da extensão VSCode com resultado de tool vscode_*</td></tr>
-      </tbody>
-    </table>
-
-    <h4>Fluxo completo via curl</h4>
-    <pre><code># 1. Criar sessão
-SESSION=$(curl -s -X POST http://localhost:8000/v1/sessions \
-  -H "Content-Type: application/json" \
-  -d '{"agent_id": "&lt;GEMMA_ID&gt;"}' | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
-
-# 2. Enviar mensagem
-curl -X POST http://localhost:8000/v1/sessions/$SESSION/events \
-  -H "Content-Type: application/json" \
-  -d '{"content": "Liste os arquivos .py do projeto"}'
-
-# 3. Ouvir o stream SSE
-curl -N http://localhost:8000/v1/sessions/$SESSION/stream</code></pre>
-
-    <!-- ── SSE Events ── -->
-    <h2 id="sse-events">Eventos SSE</h2>
-
-    <p>Todos os eventos chegam no formato <code>data: {JSON}\n\n</code>. Cada evento tem sempre os campos <code>type</code>, <code>session_id</code> e <code>timestamp</code>.</p>
-
-    <div class="event-cards">
-      <div class="event-card">
-        <div class="event-type">user.message</div>
-        <div class="event-desc">Mensagem do usuário persistida na sessão. Campo: <code>content</code></div>
-      </div>
-      <div class="event-card">
-        <div class="event-type">agent.message</div>
-        <div class="event-desc">Resposta final do agente. Campos: <code>content</code>, <code>model</code></div>
-      </div>
-      <div class="event-card">
-        <div class="event-type">agent.tool_use</div>
-        <div class="event-desc">Agente chamou uma tool. Campos: <code>tool_name</code>, <code>tool_input</code>, <code>tool_call_id</code>, <code>awaiting_callback</code></div>
-      </div>
-      <div class="event-card">
-        <div class="event-type">agent.tool_result</div>
-        <div class="event-desc">Resultado de uma tool. Campos: <code>tool_name</code>, <code>tool_call_id</code>, <code>output</code>, <code>is_error</code></div>
-      </div>
-      <div class="event-card">
-        <div class="event-type">session.status_idle</div>
-        <div class="event-desc">Sessão concluída com sucesso. Sinal de fim de stream.</div>
-      </div>
-      <div class="event-card">
-        <div class="event-type">session.error</div>
-        <div class="event-desc">Erro na sessão. Campo: <code>message</code></div>
-      </div>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🚀 JARVAS</div>
+                <div class="sidebar-subtitle">Manual Interativo</div>
+            </div>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar...">
+            </div>
+            <ul class="sidebar-nav" id="sidebarNav">
+                <li><a href="#" data-section="intro" class="nav-link active">🏠 Introdução</a></li>
+                <li><a href="#" data-section="setup" class="nav-link">📋 Setup & Configuração</a></li>
+                <li><a href="#" data-section="cli" class="nav-link">💻 CLI Interativa</a></li>
+                <li><a href="#" data-section="commands" class="nav-link">⚡ Slash Commands</a></li>
+                <li><a href="#" data-section="guards" class="nav-link">🤖 Guardas Especializados</a></li>
+                <li><a href="#" data-section="debate" class="nav-link">💭 Debate Multi-Agente</a></li>
+                <li><a href="#" data-section="mempalace" class="nav-link">💾 MemPalace</a></li>
+                <li><a href="#" data-section="managed" class="nav-link">🔧 Agentes Gerenciáveis</a></li>
+                <li><a href="#" data-section="api" class="nav-link">📡 API REST</a></li>
+                <li><a href="#" data-section="examples" class="nav-link">🎯 Exemplos Práticos</a></li>
+                <li><a href="#" data-section="troubleshoot" class="nav-link">🆘 Troubleshooting</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Introdução -->
+            <section id="intro" class="section active">
+                <h1>🚀 Bem-vindo ao Jarvas</h1>
+                <p class="intro-text">
+                    Jarvas é um assistente de IA distribuído com múltiplos guardas especializados, roteamento inteligente
+                    de modelos e mineração automática de progresso. Em vez de depender de um único modelo, o Jarvas roteia
+                    cada mensagem para o modelo mais adequado com base no tipo de tarefa, expõe guardas especializados
+                    (Gemini e DeepSeek) para análises específicas e minera automaticamente o conhecimento de conversas encerradas.
+                </p>
+
+                <h2>O que você pode fazer?</h2>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">💬 Chat Inteligente</div>
+                        <p>Faça perguntas e o Jarvas automaticamente detecta o tipo de tarefa e seleciona o modelo mais apropriado.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🎯 Slash Commands</div>
+                        <p>Use comandos especializados como /g (Gemini), /d (DeepSeek), /debate e /hmem (MemPalace).</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🧠 Memória Semântica</div>
+                        <p>O Jarvas apre automaticamente com cada conversa, armazenando aprendizados em seu MemPalace.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">📊 API REST</div>
+                        <p>Integre Jarvas em suas aplicações usando a API REST com suporte a Server-Sent Events.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🤝 Debate Automático</div>
+                        <p>Veja diferentes perspectivas: Gemini vs DeepSeek debatem tópicos e chegam a um consenso.</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">⚙️ Agentes Customizáveis</div>
+                        <p>Crie agentes gerenciáveis com sessões isoladas, histórico persistente e ferramentas customizadas.</p>
+                    </div>
+                </div>
+
+                <h2>Arquitetura Geral</h2>
+                <div class="note">
+                    <strong>Jarvas 0.3.0</strong><br>
+                    Framework multi-agente com roteamento automático, mineração de conhecimento em tempo real
+                    e persistência em Supabase + MemPalace.
+                </div>
+
+                <pre><code>CLI/API → Router → Modelo Selecionado
+                    ↓
+          Guardas Especializados (Gemini/DeepSeek)
+                    ↓
+              Mineradores (Background)
+                    ↓
+        MemPalace + Supabase (Persistência)</code></pre>
+
+                <h2>Versão &amp; Requisitos</h2>
+                <ul>
+                    <li><strong>Versão:</strong> 0.3.0</li>
+                    <li><strong>Python:</strong> 3.11+</li>
+                    <li><strong>Principais Dependências:</strong> FastAPI, prompt_toolkit, OpenAI SDK, google-generativeai</li>
+                </ul>
+            </section>
+
+            <!-- Setup & Configuração -->
+            <section id="setup" class="section">
+                <h1>📋 Setup & Configuração</h1>
+
+                <h2>Instalação</h2>
+                <p>Certifique-se de ter Python 3.11+ instalado e clone o repositório:</p>
+                <pre><code>git clone https://github.com/melowesley/Jarvas-agent.git
+cd jarvas
+pip install -r requirements.txt</code></pre>
+
+                <h2>Variáveis de Ambiente</h2>
+                <p>Crie um arquivo <code>.env</code> na raiz do projeto com as seguintes variáveis:</p>
+                <pre><code># APIs Externas
+OPENROUTER_API_KEY=seu_openrouter_key
+GEMINI_API_KEY=seu_gemini_key
+DEEPSEEK_API_KEY=seu_deepseek_key
+
+# Supabase (Persistência)
+SUPABASE_URL=sua_supabase_url
+SUPABASE_KEY=sua_supabase_key
+
+# MemPalace (Memória Semântica)
+MEMPALACE_URL=http://localhost:8000  # ou sua URL de MemPalace
+
+# Ollama (Opcional - para modelos locais)
+OLLAMA_BASE_URL=http://localhost:11434</code></pre>
+
+                <h2>Obtendo as Chaves</h2>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>OpenRouter API</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <ol>
+                            <li>Acesse <code>https://openrouter.ai</code></li>
+                            <li>Crie uma conta ou faça login</li>
+                            <li>Vá para Dashboard → Keys</li>
+                            <li>Crie uma nova chave e copie</li>
+                            <li>Adicione créditos à sua conta para usar os modelos</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>Google Gemini API</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <ol>
+                            <li>Acesse <code>https://ai.google.dev</code></li>
+                            <li>Clique em "Get API Key"</li>
+                            <li>Crie um novo projeto ou selecione existente</li>
+                            <li>Copie a chave gerada</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>DeepSeek API</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <ol>
+                            <li>Acesse <code>https://platform.deepseek.com</code></li>
+                            <li>Faça login ou crie conta</li>
+                            <li>Vá para API Keys</li>
+                            <li>Crie uma nova chave</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <h2>Verificando a Instalação</h2>
+                <pre><code>python -m jarvas --help</code></pre>
+
+                <div class="success">
+                    <strong>✅ Pronto!</strong> Se você vir as opções de ajuda, a instalação foi bem-sucedida.
+                </div>
+            </section>
+
+            <!-- CLI Interativa -->
+            <section id="cli" class="section">
+                <h1>💻 CLI Interativa</h1>
+
+                <h2>Iniciando a CLI</h2>
+                <p>A forma mais simples de usar o Jarvas é através da CLI interativa:</p>
+                <pre><code>jarvas</code></pre>
+
+                <p>Você verá um prompt esperando sua entrada:</p>
+                <pre><code>você > _</code></pre>
+
+                <h2>Três Formas de Usar</h2>
+
+                <h3>1. Pergunta Direta</h3>
+                <pre><code>você > Como eu funciono?</code></pre>
+                <p>O Jarvas processa sua pergunta, detecta o tipo de tarefa, seleciona o modelo apropriado e responde.</p>
+
+                <h3>2. Conversa Contínua</h3>
+                <pre><code>você > Explique roteamento de IA
+jarvas > Roteamento de IA é o processo de direcionar...
+
+você > E qual é a vantagem disso?
+jarvas > A principal vantagem é...</code></pre>
+                <p>Mantenha o histórico da conversa durante a sessão.</p>
+
+                <h3>3. Retomar Contexto Anterior</h3>
+                <pre><code>jarvas continuar ontem 15h</code></pre>
+                <p>Retoma a conversa do dia anterior às 15h (se disponível em Supabase).</p>
+
+                <h2>Atalhos e Comandos Especiais</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Comando</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>/help</code></td>
+                            <td>Mostra lista de slash commands disponíveis</td>
+                        </tr>
+                        <tr>
+                            <td><code>/clear</code></td>
+                            <td>Limpa o histórico da sessão atual</td>
+                        </tr>
+                        <tr>
+                            <td><code>/exit</code> ou <code>Ctrl+D</code></td>
+                            <td>Sair da CLI</td>
+                        </tr>
+                        <tr>
+                            <td><code>/history</code></td>
+                            <td>Mostra histórico de mensagens da sessão</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>Detecção Automática de Tipo de Tarefa</h2>
+                <p>O Jarvas detecta automaticamente o tipo de tarefa e seleciona o melhor modelo:</p>
+
+                <div class="card">
+                    <div class="card-title">📊 Analysis</div>
+                    <p><strong>Detectado:</strong> Perguntas sobre dados, estatísticas, insights<br>
+                    <strong>Modelo:</strong> Claude 3.5 Sonnet</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💻 Code</div>
+                    <p><strong>Detectado:</strong> Perguntas sobre programação, debugging, arquitetura<br>
+                    <strong>Modelo:</strong> Llama 3.3 70B</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🖼️ Vision</div>
+                    <p><strong>Detectado:</strong> Análise de imagens, OCR, reconhecimento visual<br>
+                    <strong>Modelo:</strong> GPT-4 Vision</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">💬 Chat</div>
+                    <p><strong>Detectado:</strong> Conversas gerais, perguntas abertas<br>
+                    <strong>Modelo:</strong> Hermes 3</p>
+                </div>
+
+                <h2>Fluxo de Processamento</h2>
+                <pre><code>Entrada do usuário
+        ↓
+    [Router]
+        ↓
+    Detecta tipo
+        ↓
+    Seleciona modelo
+        ↓
+    Processa com OpenRouter
+        ↓
+    Salva em Supabase
+        ↓
+    Resposta ao usuário</code></pre>
+            </section>
+
+            <!-- Slash Commands -->
+            <section id="commands" class="section">
+                <h1>⚡ Slash Commands</h1>
+
+                <p class="intro-text">
+                    Slash commands permitem você acessar guardas especializados e funcionalidades avançadas do Jarvas.
+                    Use <code>/help</code> para ver todos os comandos disponíveis.
+                </p>
+
+                <h2>Guardas Diretos</h2>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/g &lt;prompt&gt; — Gemini Direto</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Força uma resposta do Gemini 2.5 Flash (análise, web search, busca de informações).</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /g Qual é a capital da Austrália?
+gemini > A capital da Austrália é Canberra...</code></pre>
+                        <p><span class="tag">Análise</span> <span class="tag">Busca</span> <span class="tag">Pesquisa</span></p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/g web &lt;busca&gt; — Gemini + Web Search</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Usa Gemini com busca web em tempo real para informações atualizadas.</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /g web últimas notícias sobre IA em 2026
+gemini > [Busca a web] As últimas notícias sobre IA incluem...</code></pre>
+                        <p><span class="tag success">Web Search</span> <span class="tag">Real-time</span></p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/d &lt;prompt&gt; — DeepSeek Direto</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Força uma resposta do DeepSeek (estruturação, análise de código, lógica).</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /d Como implementar um algoritmo de ordenação eficiente?
+deepseek > Existem vários algoritmos: MergeSort, QuickSort, HeapSort...</code></pre>
+                        <p><span class="tag">Código</span> <span class="tag">Estruturação</span></p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/d web &lt;busca&gt; — DeepSeek + Web Search</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>DeepSeek com busca web para análises estruturadas de informações recentes.</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /d web tendências de tecnologia 2026
+deepseek > [Busca a web] As tendências incluem: 1) IA Distribuída, 2) Quantum Computing...</code></pre>
+                    </div>
+                </div>
+
+                <h2>Debate Multi-Agente</h2>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/debate &lt;tópico&gt; — Debate Gemini vs DeepSeek</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Veja dois agentes especializados debatem um tópico e chegam a um consenso.</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /debate IA generativa é perigosa?
+
+[Rodada 1] Gemini: A IA generativa pode ser perigosa se...
+[Rodada 2] DeepSeek: Concordo que há riscos, mas também há benefícios...
+[Rodada 3] Gemini: Isso faz sentido. O consenso é que...</code></pre>
+                        <p><span class="tag warning">3 Rodadas</span> <span class="tag">Consenso</span></p>
+                    </div>
+                </div>
+
+                <h2>Forçar Modelo Específico</h2>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hopen &lt;model-id&gt; — Força Modelo</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Bypassa o roteamento automático e força um modelo específico do OpenRouter.</p>
+                        <strong>Modelos disponíveis:</strong>
+                        <ul>
+                            <li><code>llama-3.3-70b</code> - Llama 3.3 (código e lógica)</li>
+                            <li><code>hermes-3-extended</code> - Hermes 3 (chat geral)</li>
+                            <li><code>claude-3.5-sonnet</code> - Claude Sonnet (análise)</li>
+                            <li><code>gpt-4-vision</code> - GPT-4 Vision (imagens)</li>
+                        </ul>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /hopen llama-3.3-70b
+você > Agora escreva uma função recursiva em Python</code></pre>
+                    </div>
+                </div>
+
+                <h2>MemPalace (Memória Semântica)</h2>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem status — Status do MemPalace</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Mostra o status atual do sistema de memória.</p>
+                        <pre><code>você > /hmem status
+MemPalace > Wings: 2
+            Drawers: 42
+            Total embeddings: 1247</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem list — Listar Wings (Categorias)</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Lista todas as categorias (wings) de memória.</p>
+                        <pre><code>você > /hmem list
+MemPalace > Wings disponíveis:
+            - jarvas/learnings (aprendizados)
+            - jarvas/code (snippets)</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem search &lt;busca&gt; — Busca Semântica</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Busca aprendizados relacionados usando semântica (não keyword matching).</p>
+                        <pre><code>você > /hmem search problema com async em Python
+MemPalace > Encontrado 3 drawers relacionados:
+            1. [confidence: 0.94] Como usar asyncio...
+            2. [confidence: 0.87] Debugging de coroutines...
+            3. [confidence: 0.71] Event loops explicado</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem add &lt;wing&gt; &lt;room&gt; &lt;conteúdo&gt; — Adicionar Memória</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Adiciona manualmente um aprendizado ao MemPalace.</p>
+                        <strong>Exemplo:</strong>
+                        <pre><code>você > /hmem add jarvas/learnings async "useEffect sem dependências causa loops"
+MemPalace > ✅ Drawer adicionado com sucesso (ID: d42c8f2a)</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem get &lt;id&gt; — Obter Drawer Específico</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Recupera um aprendizado específico pelo ID.</p>
+                        <pre><code>você > /hmem get d42c8f2a
+MemPalace > ID: d42c8f2a
+            Conteúdo: useEffect sem dependências causa loops
+            Criado: 2026-04-10 14:32
+            Confidence: 0.92</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/hmem del &lt;id&gt; — Deletar Drawer</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Remove um aprendizado do MemPalace.</p>
+                        <pre><code>você > /hmem del d42c8f2a
+MemPalace > ✅ Drawer deletado</code></pre>
+                    </div>
+                </div>
+
+                <h2>Agentes Gerenciáveis</h2>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/session list — Listar Agentes</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Lista todos os agentes disponíveis para criar sessões.</p>
+                        <pre><code>você > /session list
+Agentes disponíveis:
+- hermes (Chat geral)
+- gemini-guard (Análise especializada)
+- deepseek-guard (Estruturação)
+- gemma-local (Agente local via Ollama)</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/session new &lt;agent&gt; — Criar Sessão</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Cria uma nova sessão com um agente específico.</p>
+                        <pre><code>você > /session new gemini-guard
+✅ Sessão criada: sess_a8f2k9d
+Conectado ao agente: gemini-guard
+
+você > Sua pergunta aqui?</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/session send &lt;id&gt; &lt;msg&gt; — Enviar Mensagem</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Envia uma mensagem para uma sessão específica.</p>
+                        <pre><code>você > /session send sess_a8f2k9d Qual é a capital do Brasil?
+Agente (sess_a8f2k9d) > A capital do Brasil é Brasília...</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>/session history &lt;id&gt; — Ver Histórico</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Mostra o histórico completo de uma sessão.</p>
+                        <pre><code>você > /session history sess_a8f2k9d
+[Mensagem 1] você: Qual é a capital do Brasil?
+[Mensagem 2] agente: A capital do Brasil é Brasília...
+[Mensagem 3] você: Quantos habitantes tem?
+[Mensagem 4] agente: Brasília tem aproximadamente 3.1 milhões...</code></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Heartbeat e Replay</div>
-      O stream envia <code>: heartbeat</code> a cada 30s para manter a conexão viva (ignorado pelos clientes). Se você conectar ao stream após a sessão já ter terminado, os eventos são reproduzidos em replay automaticamente.
-    </div>
+    <script>
+        // Navigation
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const searchInput = document.getElementById('searchInput');
 
-    <h3>Campo <code>awaiting_callback</code> (ferramentas VSCode)</h3>
-    <p>Quando o agente gemma-local chama uma <code>vscode_*</code> tool, o evento <code>agent.tool_use</code> inclui <code>"awaiting_callback": true</code>. A extensão VSCode executa a operação e chama <code>POST /v1/sessions/{id}/tool_result</code> com o resultado. O servidor então continua o loop do agente.</p>
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.dataset.section;
+                showSection(section);
+                link.classList.add('active');
+                navLinks.forEach(l => l !== link && l.classList.remove('active'));
+            });
+        });
 
-    <hr class="section-divider">
+        function showSection(sectionId) {
+            sections.forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            window.scrollTo(0, 0);
+        }
 
-    <!-- ── VSCode ── -->
-    <h2 id="vscode-install">Instalar a Extensão VSCode</h2>
+        // Accordion
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const isActive = content.classList.contains('active');
 
-    <p>A extensão adiciona um botão <code>🤖 Jarvas</code> na barra de status inferior direita do VSCode que abre o painel de chat.</p>
+                document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
 
-    <ol class="steps">
-      <li>
-        <strong>Abrir o diretório da extensão no VSCode</strong>
-        <pre><code>cd jarvas-vscode
-code .</code></pre>
-      </li>
-      <li>
-        <strong>Instalar dependências TypeScript</strong>
-        <pre><code>npm install</code></pre>
-      </li>
-      <li>
-        <strong>Compilar</strong>
-        <pre><code>npm run compile
-# ou para watch (recompila ao salvar):
-npm run watch</code></pre>
-      </li>
-      <li>
-        <strong>Rodar em modo de desenvolvimento</strong>
-        <p>Pressione <kbd>F5</kbd> no VSCode. Isso abre uma nova janela "Extension Development Host" com a extensão carregada.</p>
-      </li>
-      <li>
-        <strong>Instalar definitivamente (opcional)</strong>
-        <pre><code>npm run package   # gera jarvas-chat-0.1.0.vsix
-code --install-extension jarvas-chat-0.1.0.vsix</code></pre>
-      </li>
-    </ol>
+                if (!isActive) {
+                    content.classList.add('active');
+                    header.classList.add('active');
+                }
+            });
+        });
 
-    <!-- ── Usar o chat ── -->
-    <h2 id="vscode-use">Usar o Chat no VSCode</h2>
+        // Copy to clipboard
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-btn')) {
+                const code = e.target.nextElementSibling.textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '✓ Copiado!';
+                    setTimeout(() => {
+                        e.target.textContent = originalText;
+                    }, 2000);
+                });
+            }
+        });
 
-    <ol class="steps">
-      <li>
-        <strong>Certifique-se que o servidor está rodando</strong>
-        <pre><code>jarvas --managed</code></pre>
-      </li>
-      <li>
-        <strong>Clique no botão na status bar</strong>
-        <p>O botão <code>🤖 Jarvas</code> fica no canto inferior direito. Um painel de chat abre ao lado do editor.</p>
-      </li>
-      <li>
-        <strong>Selecione o agente no dropdown</strong>
-        <p>Escolha <strong>gemma-local</strong> para edição de arquivos offline, ou outro agente para tarefas específicas.</p>
-      </li>
-      <li>
-        <strong>Converse normalmente</strong>
-        <p>O agente tem acesso às ferramentas do VSCode. Você verá as chamadas de ferramenta exibidas de forma colapsável no chat (<code>🔧 vscode_edit</code>).</p>
-      </li>
-    </ol>
-
-    <div class="callout callout-tip">
-      <div class="callout-title">✅ Dicas de uso com gemma-local</div>
-      <ul style="padding-left:18px;margin-top:6px;color:var(--text-dim);font-size:0.875rem">
-        <li>Diga ao agente o caminho completo dos arquivos, ou peça para ele listar com <code>vscode_list</code> primeiro</li>
-        <li>Para edições precisas, peça ao agente para ler o arquivo antes de editar</li>
-        <li>O <code>vscode_terminal</code> envia o comando mas não espera pelo resultado — use para iniciar processos</li>
-        <li>O agente pode alternar entre <code>read</code> (server-side) e <code>vscode_open</code> (VSCode-side) dependendo da task</li>
-      </ul>
-    </div>
-
-    <hr class="section-divider">
-
-    <!-- ── Arquitetura ── -->
-    <h2 id="arch">Arquitetura Detalhada</h2>
-
-    <h3>Backends de modelo suportados</h3>
-    <table class="cmd-table">
-      <thead><tr><th>Prefixo do model ID</th><th>Backend</th><th>API Key</th></tr></thead>
-      <tbody>
-        <tr><td><code>gemini-*</code>, <code>google/*</code></td><td>Google Generative AI SDK</td><td>GEMINI_API_KEY</td></tr>
-        <tr><td><code>ollama/*</code>, <code>gemma*</code>, <code>llama*</code>, <code>mistral*</code>, <code>phi*</code></td><td>Ollama (localhost:11434)</td><td>Nenhuma</td></tr>
-        <tr><td>qualquer outro</td><td>OpenRouter (httpx async)</td><td>OPENROUTER_API_KEY</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Proteções do runtime</h3>
-    <table class="cmd-table">
-      <thead><tr><th>Limite</th><th>Valor</th><th>Comportamento ao atingir</th></tr></thead>
-      <tbody>
-        <tr><td>MAX_CYCLES</td><td>10 ciclos de tool_use por sessão</td><td>Emite <code>session.error</code></td></tr>
-        <tr><td>MAX_DEPTH</td><td>3 níveis de sub-agentes</td><td>Emite <code>session.error</code></td></tr>
-        <tr><td>VSCode tool timeout</td><td>60 segundos por callback</td><td>Retorna erro para o agente, sessão continua</td></tr>
-        <tr><td>SSE heartbeat</td><td>A cada 30s</td><td>Envia <code>: heartbeat</code> para manter conexão</td></tr>
-        <tr><td>SSE max idle</td><td>300s (5 min)</td><td>Encerra o stream</td></tr>
-        <tr><td>bash timeout</td><td>30s</td><td>Retorna erro de timeout para o agente</td></tr>
-        <tr><td>read max size</td><td>50 KB</td><td>Trunca com aviso</td></tr>
-      </tbody>
-    </table>
-
-    <!-- ── Agentes Preset ── -->
-    <h2 id="agents-preset">Agentes Pré-configurados</h2>
-
-    <h3>hermes</h3>
-    <p>Agente orquestrador principal. Usa <strong>nousresearch/hermes-3-llama-3.1-70b</strong> via OpenRouter. Pode invocar gemini-guard e deepseek-guard como sub-agentes via a tool <code>call_agent</code>.</p>
-    <p>Tools: <code>bash</code>, <code>write</code>, <code>read</code>, <code>web_search</code></p>
-
-    <h3>gemini-guard</h3>
-    <p>Especializado em busca na web e processamento de informações. Usa <strong>gemini-2.5-flash</strong> diretamente via Google SDK.</p>
-    <p>Tools: <code>web_search</code>, <code>read</code></p>
-
-    <h3>deepseek-guard</h3>
-    <p>Especializado em análise técnica e escrita de código. Usa <strong>deepseek/deepseek-chat</strong> via OpenRouter.</p>
-    <p>Tools: <code>read</code>, <code>write</code></p>
-
-    <h3>gemma-local <span class="new-badge">Novo</span></h3>
-    <p>Agente autônomo para edição de código no VSCode. Roda <strong>100% offline</strong> via Ollama (gemma4). Único agente com ferramentas nativas do VSCode.</p>
-    <p>Tools: <code>read</code>, <code>web_search</code>, <code>vscode_open</code>, <code>vscode_edit</code>, <code>vscode_terminal</code>, <code>vscode_list</code></p>
-
-    <div class="callout callout-info">
-      <div class="callout-title">ℹ️ Criar agentes customizados</div>
-      Use <code>POST /v1/agents</code> para criar seus próprios agentes com qualquer combinação de modelo, tools e system prompt. Adicione skills para injetar contexto de domínio sem mudar o agente base.
-    </div>
-
-    <!-- ── Troubleshoot ── -->
-    <h2 id="troubleshoot">Solução de Problemas</h2>
-
-    <h3>Ollama não responde</h3>
-    <pre><code># Verificar se está rodando
-curl http://localhost:11434/api/tags
-
-# Windows: verificar o serviço
-Get-Service Ollama
-
-# Reiniciar
-ollama serve</code></pre>
-
-    <h3>Agente gemma-local trava (tool timeout)</h3>
-    <p>O agente pausa por até 60 segundos esperando a extensão VSCode executar uma tool. Se o chat não responder, verifique se a extensão está ativa (botão aparece na status bar) e o servidor está em execução.</p>
-
-    <h3>Erro 409 no PATCH de agente</h3>
-    <p>O campo <code>version</code> no body não corresponde à versão atual do agente. Busque o agente com <code>GET /v1/agents/{id}</code> para obter a versão atual e tente novamente.</p>
-
-    <h3>SSE stream encerra imediatamente</h3>
-    <p>A sessão já estava no estado <code>idle</code> quando você conectou. O servidor envia os eventos em replay e encerra. Isso é comportamento esperado — os dados estão todos no replay.</p>
-
-    <h3>Extensão VSCode não aparece</h3>
-    <pre><code># Verificar se compilou corretamente
-cd jarvas-vscode
-npm run compile
-
-# Em modo de desenvolvimento: F5 no VSCode para abrir Extension Development Host</code></pre>
-
-    <h3>web_search falha</h3>
-    <p>A busca web usa o Gemini. Certifique-se que <code>GEMINI_API_KEY</code> está configurada no <code>.env</code> mesmo quando usar o agente gemma-local (que roda localmente, mas delega a busca ao guard Gemini).</p>
-
-    <footer>
-      <p>Jarvas v0.4.0 — Managed Agents + Ollama/Gemma 4 + VSCode Native Tools</p>
-      <p style="margin-top:6px">Para dúvidas, consulte os arquivos em <code>jarvas/managed/</code> e <code>jarvas-vscode/</code></p>
-    </footer>
-
-  </main>
-</div>
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            navLinks.forEach(link => {
+                const text = link.textContent.toLowerCase();
+                link.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

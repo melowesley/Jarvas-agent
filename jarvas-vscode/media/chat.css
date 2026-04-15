@@ -110,6 +110,25 @@ footer {
     color: var(--vscode-errorForeground);
 }
 
+#status-bar {
+    padding: 4px 10px;
+    font-size: 0.82em;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+#status-bar.status-ok { color: var(--vscode-testing-iconPassed, #4caf50); }
+#status-bar.status-error { color: var(--vscode-errorForeground, #f44); }
+#status-bar.status-connecting { color: var(--vscode-descriptionForeground); }
+#status-bar button {
+    margin-left: 8px;
+    font-size: 0.9em;
+    padding: 1px 6px;
+    cursor: pointer;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+}
+
 select#agent-select {
     background-color: var(--vscode-dropdown-background);
     color: var(--vscode-dropdown-foreground);

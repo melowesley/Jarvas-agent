@@ -28,6 +28,8 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         if not args:
             return "[red]Uso:[/red] /hopen <model-id>"
         return f"[yellow]Próxima mensagem usará o modelo:[/yellow] {args}"
+    if cmd == "/hmem":
+        return _hmem(args)
     if cmd == "/session":
         return _session(args)
 
@@ -41,6 +43,7 @@ def _help() -> str:
         "  [cyan]/d web[/cyan] <busca>         → DeepSeek + busca web\n"
         "  [cyan]/debate[/cyan] <tópico>       → Debate Gemini vs DeepSeek\n"
         "  [cyan]/hopen[/cyan] <model-id>      → Forçar modelo específico\n"
+        "\n[bold yellow]⚠️  MemPalace (limitado no Python 3.13/Windows):[/bold yellow]\n"
         "  [cyan]/hmem status[/cyan]           → Status do MemPalace\n"
         "  [cyan]/hmem list[/cyan]             → Listar wings\n"
         "  [cyan]/hmem search[/cyan] <busca>   → Busca semântica\n"
@@ -49,6 +52,8 @@ def _help() -> str:
         "  [cyan]/hmem del[/cyan] <id>         → Deletar drawer\n"
         "  [cyan]/hmem graph[/cyan]            → Estatísticas do grafo\n"
         "  [cyan]/hmem kg[/cyan] <busca>       → Consultar knowledge graph\n"
+        "  [dim](Nota: Requer Python 3.12 ou pip install mempalace)[/dim]\n"
+        "\n[bold]Sessões Gerenciadas:[/bold]\n"
         "  [cyan]/session list[/cyan]          → Listar agentes disponíveis\n"
         "  [cyan]/session new[/cyan] <agent>   → Criar nova sessão com agente\n"
         "  [cyan]/session send[/cyan] <id> <msg> → Enviar mensagem para sessão\n"

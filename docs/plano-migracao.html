@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano de Migração DeepSeek → Gemini</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #10b981;
+            --secondary: #059669;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --text-light: #f1f5f9;
+            --text-muted: #cbd5e1;
+            --border: #334155;
+            --code-bg: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+            color: var(--text-light);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 1.5rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-logo {
+            font-size: 1.6rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 0.25rem 0;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-nav a:hover {
+            color: var(--text-light);
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: var(--primary);
+        }
+
+        .sidebar-nav a.active {
+            color: var(--primary);
+            background: rgba(16, 185, 129, 0.15);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 3rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-light);
+            border-bottom: 2px solid rgba(16, 185, 129, 0.2);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-light);
+            line-height: 1.8;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+        }
+
+        /* Code Blocks */
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.3rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #a1d391;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(16, 185, 129, 0.15);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Accordion */
+        .accordion-item {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            padding: 1rem 1.5rem;
+            background: rgba(16, 185, 129, 0.08);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .accordion-header:hover {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .accordion-header.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--primary);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .accordion-content.active {
+            display: block;
+        }
+
+        .toggle-icon {
+            transition: transform 0.2s;
+        }
+
+        .accordion-header.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Tags and Badges */
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag.phase {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--primary);
+        }
+
+        .tag.critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .tag.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--primary);
+        }
+
+        /* Info Boxes */
+        .note {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 3px solid var(--accent);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .danger-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid var(--danger);
+            padding: 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            margin: 2rem 0;
+            border-left: 2px solid var(--primary);
+            padding-left: 2rem;
+        }
+
+        .timeline-item {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.5rem;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid var(--bg-dark);
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 0.5rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: '☐';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .checklist li.done::before {
+            content: '✓';
+            color: #22c55e;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 1rem 0;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+            .grid-2 { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.5rem; }
+        }
+
+        .highlight {
+            background: rgba(245, 158, 11, 0.2);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.2rem;
+            color: var(--accent);
+        }
+
+        .success {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🔄 MIGRAÇÃO</div>
+                <div class="sidebar-subtitle">DeepSeek → Gemini</div>
+            </div>
+            <ul class="sidebar-nav" id="sidebarNav">
+                <li><a href="#" data-section="overview" class="nav-link active">📊 Visão Geral</a></li>
+                <li><a href="#" data-section="feedback" class="nav-link">💭 Feedback & Ajustes</a></li>
+                <li><a href="#" data-section="fase1" class="nav-link">📋 Fase 1: Especificação</a></li>
+                <li><a href="#" data-section="fase2" class="nav-link">🔍 Fase 2: Análise Gemini</a></li>
+                <li><a href="#" data-section="fase3" class="nav-link">🗺️ Fase 3: Mapeamento</a></li>
+                <li><a href="#" data-section="fase4" class="nav-link">⚙️ Fase 4: Implementação</a></li>
+                <li><a href="#" data-section="fase5" class="nav-link">✅ Fase 5: Validação</a></li>
+                <li><a href="#" data-section="timeline" class="nav-link">📅 Timeline Ajustada</a></li>
+                <li><a href="#" data-section="dashboard" class="nav-link">📈 Métricas & Dashboard</a></li>
+                <li><a href="#" data-section="questoes" class="nav-link">❓ Questões Críticas</a></li>
+                <li><a href="#" data-section="resumo" class="nav-link">📝 TL;DR & Próximos Passos</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Visão Geral -->
+            <section id="overview" class="section active">
+                <h1>📊 Plano de Migração: DeepSeek → Gemini</h1>
+                <p class="intro-text">
+                    Estratégia estruturada em 5 fases para migrar a lógica de processamento do DeepSeek
+                    para o Gemini, mantendo funcionalidade e adicionando redundância ao Jarvas.
+                </p>
+
+                <h2>Objetivo Geral</h2>
+                <div class="note">
+                    <strong>✅ Permitir que o Guarda Gemini execute a mesma lógica processamento do DeepSeek</strong><br><br>
+                    Benefícios esperados:
+                    <ul>
+                        <li>Redundância: Ambos os guardas disponíveis em produção</li>
+                        <li>Flexibilidade: Escolher melhor modelo por caso</li>
+                        <li>Eficiência: Otimizar custo/latência por tarefa</li>
+                        <li>Resiliência: Fallback automático em caso de falha</li>
+                    </ul>
+                </div>
+
+                <h2>Estrutura do Projeto</h2>
+                <pre><code>guarda-migration/
+├── fase-1-especificacao/
+│   ├── spec-logica-fonte-v1.0.json
+│   └── prompts-catalogados.md
+├── fase-2-analise/
+│   ├── analise-ambiente-gemini-v1.0.md
+│   └── limitacoes-gemini.md
+├── fase-3-mapeamento/
+│   ├── matriz-mapeamento.csv
+│   └── arquitetura-v1.0.yaml
+├── fase-4-implementacao/
+│   ├── deepseek_core/
+│   ├── gemini_adapter/
+│   └── contratos/
+├── fase-5-validacao/
+│   ├── test_prompt_portability.py
+│   ├── test_a_b.py
+│   └── dashboard.yaml
+└── README.md</code></pre>
+
+                <h2>Risco x Benefício</h2>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">✅ Benefícios</div>
+                        <ul>
+                            <li>Redundância de guardas</li>
+                            <li>Otimização de custos</li>
+                            <li>Melhor resiliência</li>
+                            <li>Flexibilidade de roteamento</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">⚠️ Riscos</div>
+                        <ul>
+                            <li>Resultados diferentes (modelos distintos)</li>
+                            <li>Maior complexidade operacional</li>
+                            <li>Duplicação de custos inicial</li>
+                            <li>Validação exigente</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Feedback & Ajustes -->
+            <section id="feedback" class="section">
+                <h1>💭 Feedback Crítico & Ajustes Recomendados</h1>
+
+                <h2>1️⃣ Problema: "Lógica-Fonte" é Ambígua</h2>
+                <div class="warning-box">
+                    <strong>⚠️ DeepSeek é um modelo de IA, não código determinístico</strong>
+                </div>
+
+                <p>O que você realmente quer extrair?</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Opção</th>
+                            <th>O quê</th>
+                            <th>Dificuldade</th>
+                            <th>Portabilidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>A: Regras de Negócio</strong></td>
+                            <td>if/then, parsers, lógica determinística</td>
+                            <td>🟢 Fácil</td>
+                            <td>⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td><strong>B: Prompts (RECOMENDADO)</strong></td>
+                            <td>System prompts, instruções que funcionam bem</td>
+                            <td>🟡 Médio</td>
+                            <td>⭐⭐⭐</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C: Padrões de Processamento</strong></td>
+                            <td>Parsing, classificação, steps sequenciais</td>
+                            <td>🟠 Complexo</td>
+                            <td>⭐⭐</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="note">
+                    <strong>✅ Recomendação:</strong> Comece por <strong>B (Prompts)</strong> - é mais fácil de versionar e portável
+                </div>
+
+                <h2>2️⃣ Problema: Métrica "95% Matching" Não é Realista</h2>
+                <div class="danger-box">
+                    <strong>❌ Gemini e DeepSeek são modelos diferentes</strong><br>
+                    Esperar respostas idênticas é ilusório.
+                </div>
+
+                <p><strong>Métricas Realistas:</strong></p>
+                <ul>
+                    <li><span class="success">✅ Acuracidade na tarefa</span> (ex: classificação correta)</li>
+                    <li><span class="success">✅ Satisfação do usuário</span> (sim/não, NPS)</li>
+                    <li><span class="success">✅ Tempo de resposta</span> (p50, p95, p99)</li>
+                    <li><span class="success">✅ Taxa de erro</span> (timeouts, mal-formado)</li>
+                    <li><span class="success">✅ Custo por token</span> (impacto financeiro)</li>
+                </ul>
+
+                <h2>3️⃣ Problema: Falta de Análise de Custo</h2>
+                <div class="warning-box">
+                    DeepSeek é mais barato que Gemini. Precisa de business case.
+                </div>
+
+                <p><strong>Análise Necessária:</strong></p>
+                <pre><code>Custo por 1000 tokens (2026):
+  DeepSeek Chat:  $0.14 (input) + $0.56 (output)
+  Gemini 2.5:     $0.075 (input) + $0.30 (output)
+
+Volume esperado: 10k requisições/dia
+  DeepSeek: ~$420/mês
+  Gemini:   ~$225/mês
+
+Delta: +$195/mês (ou -$195 se for fallback inteligente)</code></pre>
+
+                <h2>✅ Ajustes Implementados</h2>
+                <ul class="checklist">
+                    <li class="done">Foco em Prompts (não regras/código)</li>
+                    <li class="done">Métricas realistas (acuracidade, não matching)</li>
+                    <li class="done">Análise de custo/ROI</li>
+                    <li class="done">Timeline mais agressiva (semana 1: testes rápidos)</li>
+                    <li class="done">Dashboard essencial (sucesso, latência, custo)</li>
+                </ul>
+            </section>
+
+            <!-- Fase 1 -->
+            <section id="fase1" class="section">
+                <h1>📋 Fase 1: Definição & Isolamento da Lógica-Fonte</h1>
+
+                <h2>Artefato 1: Catálogo de Prompts Efetivos</h2>
+                <p>Em vez de especificação técnica, criar um repositório versionado de prompts que funcionam bem.</p>
+
+                <div class="card">
+                    <div class="card-title">📁 Estrutura Recomendada</div>
+                    <pre><code>deepseek_prompts/
+├── classification/
+│   ├── detect_intent.md (v1.2)
+│   │   - Prompt original
+│   │   - Taxa de sucesso: 94%
+│   │   - Casos de borda
+│   │
+│   ├── extract_entities.md (v1.0)
+│   └── score_confidence.md (v1.1)
+│
+├── generation/
+│   ├── generate_response.md (v2.0)
+│   └── format_output.md (v1.0)
+│
+└── CATALOG.md (índice com histórico)</code></pre>
+                </div>
+
+                <h2>Artefato 2: Template para Cada Prompt</h2>
+                <pre><code># detect_intent.md
+
+## Versão
+v1.2 (atualizado 2026-04-14)
+
+## Prompt Original
+[Instrução exata usada no DeepSeek]
+
+## Versão Otimizada
+[Refinamentos para melhor portabilidade]
+
+## Métricas
+- Taxa de acerto: 94%
+- Tempo médio: 250ms
+- Casos falhando: 3 (list)
+
+## Casos de Borda
+- Intent vago: fallback para "general"
+- Multi-intent: retornar top 3
+- Caracteres especiais: sanitizar antes</code></pre>
+
+                <h2>Checklist Fase 1</h2>
+                <ul class="checklist">
+                    <li>Extrair 15-20 prompts principais do DeepSeek</li>
+                    <li>Documentar cada um com template acima</li>
+                    <li>Medir taxa atual de sucesso</li>
+                    <li>Identificar pontos críticos (alta latência, baixa acuracidade)</li>
+                    <li>Versionar em Git com histórico</li>
+                </ul>
+            </section>
+
+            <!-- Fase 2 -->
+            <section id="fase2" class="section">
+                <h1>🔍 Fase 2: Análise do Ambiente-Alvo (Gemini)</h1>
+
+                <h2>Artefato 1: Comparativo DeepSeek vs Gemini</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Aspecto</th>
+                            <th>DeepSeek</th>
+                            <th>Gemini 2.5 Flash</th>
+                            <th>Observação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Latência</strong></td>
+                            <td>150-300ms</td>
+                            <td>100-200ms</td>
+                            <td>Gemini é mais rápido</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contexto Máximo</strong></td>
+                            <td>4k-8k tokens</td>
+                            <td>1M tokens</td>
+                            <td>Gemini muito maior</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Web Search</strong></td>
+                            <td>❌ Não nativo</td>
+                            <td>✅ Nativo</td>
+                            <td>Vantagem Gemini</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Custo/1k tokens</strong></td>
+                            <td>$0.14 input</td>
+                            <td>$0.075 input</td>
+                            <td>DeepSeek mais barato (2x)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Função Calling</strong></td>
+                            <td>✅ Sim</td>
+                            <td>✅ Sim</td>
+                            <td>Ambos suportam</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>Artefato 2: Limitações Conhecidas</h2>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>Rate Limiting Gemini</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Gemini tem limites de requisições por minuto. Precisa de backoff exponencial.</p>
+                        <pre><code>Limite: 60 req/min (free tier)
+           600 req/min (paid)
+
+Estratégia:
+- Queue de requisições
+- Backoff exponencial (1s, 2s, 4s, 8s)
+- Fallback para DeepSeek se timeout</code></pre>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>Diferenças em Parsing de JSON</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p>Gemini às vezes retorna JSON mal-formado. Precisa de validação.</p>
+                        <pre><code>Solução:
+1. Usar JSON mode (se disponível)
+2. Validar resposta com schema
+3. Retry com instrução mais clara
+4. Fallback para parsing manual</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fase 3 -->
+            <section id="fase3" class="section">
+                <h1>🗺️ Fase 3: Mapeamento & Arquitetura</h1>
+
+                <h2>Artefato 1: Matriz de Compatibilidade</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Componente</th>
+                            <th>Jarvas/DeepSeek</th>
+                            <th>Equivalente Gemini</th>
+                            <th>Gap</th>
+                            <th>Solução</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Parser Query</td>
+                            <td>função Python</td>
+                            <td>Prompt + regex</td>
+                            <td>Sem equivalente direto</td>
+                            <td>Abstrair em classe comum</td>
+                        </tr>
+                        <tr>
+                            <td>Classificador</td>
+                            <td>DeepSeek direto</td>
+                            <td>Gemini + prompt</td>
+                            <td>Respostas podem diferir</td>
+                            <td>Normalizar output (enum)</td>
+                        </tr>
+                        <tr>
+                            <td>Gerador Resposta</td>
+                            <td>Template + DeepSeek</td>
+                            <td>Template + Gemini</td>
+                            <td>Qualidade pode variar</td>
+                            <td>A/B test com usuários</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>Artefato 2: Arquitetura Proposta</h2>
+                <pre><code>Camada 1: Núcleo Lógico Comum
+  ├── query_processor.py (abstrato)
+  ├── response_normalizer.py
+  └── common_schemas.py
+
+Camada 2: Adaptadores
+  ├── deepseek_adapter.py (existente)
+  └── gemini_adapter.py (novo)
+      ├── prompt transformer
+      ├── response validator
+      └── error handler
+
+Camada 3: Orquestração
+  ├── router.py (escolhe DeepSeek ou Gemini)
+  ├── fallback.py (estratégia de fallback)
+  └── metrics.py (logging de tudo)
+
+Camada 4: Observabilidade
+  ├── prometheus (métricas)
+  ├── elasticsearch (logs)
+  └── grafana (dashboard)</code></pre>
+            </section>
+
+            <!-- Fase 4 -->
+            <section id="fase4" class="section">
+                <h1>⚙️ Fase 4: Implementação Iterativa</h1>
+
+                <h2>Passo 1: Extrair Interface Comum</h2>
+                <pre><code># common/interface.py
+
+from abc import ABC, abstractmethod
+from typing import Dict, Any
+
+class QueryProcessor(ABC):
+    @abstractmethod
+    def parse_query(self, input_text: str) -> Dict[str, Any]:
+        """Normalizar entrada"""
+        pass
+
+    @abstractmethod
+    def classify(self, parsed: Dict) -> str:
+        """Classificar intent"""
+        pass
+
+    @abstractmethod
+    def generate(self, classified: Dict) -> str:
+        """Gerar resposta"""
+        pass</code></pre>
+
+                <h2>Passo 2: Adaptador Gemini</h2>
+                <pre><code># gemini_adapter/adapter.py
+
+from common.interface import QueryProcessor
+
+class GeminiAdapter(QueryProcessor):
+    def __init__(self, api_key: str):
+        self.client = genai.Client(api_key=api_key)
+
+    def parse_query(self, input_text: str) -> Dict:
+        """Usa prompt + regex"""
+        response = self.client.generate(
+            model="gemini-2.5-flash",
+            prompt=f"Parse: {input_text}"
+        )
+        return self._extract_json(response.text)
+
+    def classify(self, parsed: Dict) -> str:
+        """Usa clasificador Gemini"""
+        prompt = self._build_classify_prompt(parsed)
+        response = self.client.generate(prompt)
+        return self._normalize_intent(response.text)
+
+    def generate(self, classified: Dict) -> str:
+        """Gera resposta com template"""
+        prompt = self._build_generate_prompt(classified)
+        response = self.client.generate(prompt)
+        return response.text</code></pre>
+
+                <h2>Passo 3: Orquestrador com Fallback</h2>
+                <pre><code># router/orchestrator.py
+
+class GuardaOrchestrator:
+    def __init__(self, deepseek_adapter, gemini_adapter):
+        self.ds = deepseek_adapter
+        self.gm = gemini_adapter
+
+    async def process(self, query: str,
+                      prefer_model: str = "auto") -> Dict:
+        """
+        Processa query com fallback automático
+        prefer_model: "deepseek" | "gemini" | "auto"
+        """
+
+        if prefer_model == "auto":
+            # Lógica inteligente de roteamento
+            model = self._choose_model(query)
+        else:
+            model = prefer_model
+
+        try:
+            if model == "deepseek":
+                result = await self.ds.process(query)
+            else:
+                result = await self.gm.process(query)
+
+            metrics.record_success(model, result["latency"])
+            return result
+
+        except Exception as e:
+            metrics.record_error(model, str(e))
+
+            # Fallback
+            fallback_model = "gemini" if model == "deepseek" else "deepseek"
+            try:
+                return await self.process(query, prefer_model=fallback_model)
+            except:
+                return {"error": "Ambos guardas falharam"}</code></pre>
+            </section>
+
+            <!-- Fase 5 -->
+            <section id="fase5" class="section">
+                <h1>✅ Fase 5: Validação & Monitoramento</h1>
+
+                <h2>Teste Rápido de Portabilidade</h2>
+                <pre><code># tests/test_prompt_portability.py
+
+import pytest
+from deepseek_adapter import DeepSeekAdapter
+from gemini_adapter import GeminiAdapter
+from prompts import CATALOG
+
+@pytest.mark.parametrize("prompt", CATALOG)
+async def test_prompt_portability(prompt):
+    """Testa cada prompt em ambos modelos"""
+
+    ds_result = await deepseek(prompt["name"], prompt["text"])
+    gm_result = await gemini(prompt["name"], prompt["text"])
+
+    # Avaliar ambos
+    ds_score = evaluate_response(ds_result, prompt["expected"])
+    gm_score = evaluate_response(gm_result, prompt["expected"])
+
+    # Relatório
+    print(f"{prompt['name']}")
+    print(f"  DeepSeek: {ds_score:.2%}")
+    print(f"  Gemini:   {gm_score:.2%}")
+    print(f"  Delta:    {abs(ds_score - gm_score):.2%}")
+
+    # Alerta se diferença > 10%
+    assert abs(ds_score - gm_score) < 0.10, f"Diferença > 10% em {prompt['name']}"</code></pre>
+
+                <h2>Critérios de Aceitação</h2>
+                <div class="card">
+                    <div class="card-title">✅ Sucesso = Todos Estes</div>
+                    <ul>
+                        <li><span class="highlight">Acuracidade Gemini</span> ≥ 90% (vs 95% DeepSeek)</li>
+                        <li><span class="highlight">Latência</span> < 200ms adicional</li>
+                        <li><span class="highlight">Taxa de erro</span> < 1%</li>
+                        <li><span class="highlight">Custo</span> dentro do orçamento</li>
+                        <li><span class="highlight">Satisfação</span> NPS ≥ 0 (vs baseline)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Timeline -->
+            <section id="timeline" class="section">
+                <h1>📅 Timeline Ajustada & Realista</h1>
+
+                <h2>Semana 1: Validação Rápida</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-title">Segunda: Extração de Prompts</div>
+                        <p>Identificar e documentar 15-20 prompts críticos do DeepSeek. Output: `prompts/` com template.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Terça-Quarta: Teste Paralelo</div>
+                        <p>Executar cada prompt em DeepSeek e Gemini. Medir: acuracidade, latência, custo. Output: `test_results.csv`</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Quinta: Análise de Gap</div>
+                        <p>Identificar prompts que falharam no Gemini. Priorizar por impacto. Output: `gaps.md`</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Sexta: Decisão</div>
+                        <p>Go/No-Go: Gemini consegue fazer 90% do trabalho?</p>
+                        <p><span class="success">✅ GO</span> → Próxima fase</p>
+                        <p><span class="error">❌ NO-GO</span> → Reverter ou ajustar</p>
+                    </div>
+                </div>
+
+                <h2>Semana 2: Implementação</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-title">Segunda-Terça: Interface Comum</div>
+                        <p>Extrair `QueryProcessor` abstrato. Implementar adaptadores DeepSeek e Gemini.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Quarta-Quinta: Orquestrador</div>
+                        <p>Router com fallback, métricas, logging estruturado.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Sexta: Testes Unitários</div>
+                        <p>Cobertura >80%. Mock de APIs externas.</p>
+                    </div>
+                </div>
+
+                <h2>Semana 3: Validação em Staging</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-title">Segunda-Quarta: A/B Test</div>
+                        <p>Deploy em staging. Rotear 50% das requisições para Gemini. Coletar métricas.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Quinta: Revisão</div>
+                        <p>Análise de resultados. Ajustes se necessário.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Sexta: Go Live (Produção)</div>
+                        <p>Rollout gradual: 10% → 50% → 100% com 24h entre cada stage.</p>
+                    </div>
+                </div>
+
+                <h2>Timeline Visual</h2>
+                <pre><code>SEM 1       SEM 2           SEM 3
+├─ Extração │ Interface   │ Staging
+├─ Teste    │ Adapters    │ A/B Test
+├─ Gap      │ Orquestrador│ Rollout
+└─ Decisão  │ Testes      │ Production</code></pre>
+            </section>
+
+            <!-- Dashboard -->
+            <section id="dashboard" class="section">
+                <h1>📈 Métricas & Dashboard Essencial</h1>
+
+                <h2>Métricas CRÍTICAS (Monitorar Sempre)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrica</th>
+                            <th>Alvo</th>
+                            <th>Alerta</th>
+                            <th>Ferramenta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Taxa de Sucesso</strong></td>
+                            <td>≥90%</td>
+                            <td><90%</td>
+                            <td>Prometheus</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Latência (p95)</strong></td>
+                            <td><200ms</td>
+                            <td>>300ms</td>
+                            <td>Datadog/NewRelic</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Custo/Mês</strong></td>
+                            <td><$200</td>
+                            <td>>$300</td>
+                            <td>Planilha + API</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Taxa de Erro</strong></td>
+                            <td><1%</td>
+                            <td>>2%</td>
+                            <td>Prometheus</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fallback Rate</strong></td>
+                            <td><5%</td>
+                            <td>>10%</td>
+                            <td>Logs estruturados</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>Dashboard Grafana (Exemplo)</h2>
+                <pre><code>┌─ JARVAS GUARDER MIGRATION ──────────────────┐
+│                                             │
+│  Status Geral: 🟢 HEALTHY                  │
+│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
+│                                             │
+│  Taxa de Sucesso                   Latência p95
+│  ┌─────────────────────┐           ┌──────────┐
+│  │ DeepSeek: 94%       │           │ DS: 150ms│
+│  │ Gemini:   89% ⚠️    │           │ GM: 175ms│
+│  └─────────────────────┘           └──────────┘
+│                                             │
+│  Custo Diário            Fallback Rate      │
+│  ┌─────────────────────┐ ┌──────────┐      │
+│  │ DS: $13.5           │ │ 2.1% ✅  │      │
+│  │ GM: $8.2            │ │          │      │
+│  │ Total: $21.7        │ │          │      │
+│  └─────────────────────┘ └──────────┘      │
+│                                             │
+│  Alertas Ativos: 0                         │
+│                                             │
+└─────────────────────────────────────────────┘</code></pre>
+
+                <h2>Alertas Automáticos</h2>
+                <pre><code>if taxa_sucesso_gemini < 0.85:
+    → Email + Slack: "Gemini taxa baixa"
+    → Auto-ativar 100% fallback DeepSeek
+    → Abrir issue em GitHub
+
+if latencia_p95 > 300ms:
+    → Page responsável (on-call)
+    → Investigar: rate limit? modelo?
+
+if custo_diario > $30:
+    → Alerta financeiro
+    → Revisar volume/prompts</code></pre>
+            </section>
+
+            <!-- Questões Críticas -->
+            <section id="questoes" class="section">
+                <h1>❓ Questões Críticas a Responder</h1>
+
+                <h2>1. Qual é o Objetivo Real?</h2>
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>💰 Se é ECONOMIZAR...</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p><strong>Estratégia:</strong></p>
+                        <ul>
+                            <li>Usar Gemini como fallback <span class="highlight">(mais barato)</span></li>
+                            <li>Priorizar: classificação simples → Gemini</li>
+                            <li>Fallback para DeepSeek se Gemini falhar</li>
+                            <li>Cachear respostas (Redis)</li>
+                            <li>Usar batch processing para volumes grandes</li>
+                        </ul>
+                        <p><strong>Impacto:</strong> -30% de custo (se ~5% taxa de erro aceita)</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>⚡ Se é REDUNDÂNCIA...</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p><strong>Estratégia:</strong></p>
+                        <ul>
+                            <li>Ambos em produção simultaneamente</li>
+                            <li>Health check contínuo de ambos</li>
+                            <li>Fallback automático em caso de timeout</li>
+                            <li>Circuit breaker por modelo</li>
+                        </ul>
+                        <p><strong>Impacto:</strong> 99.99% uptime (vs 99% com um)</p>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <div class="accordion-header">
+                        <span><strong>🎯 Se é FLEXIBILIDADE...</strong></span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <p><strong>Estratégia:</strong></p>
+                        <ul>
+                            <li>Expor ambos os modelos ao usuário</li>
+                            <li>Deixar escolher: /g (Gemini) ou /d (DeepSeek)</li>
+                            <li>A/B testing para otimizar por caso</li>
+                        </ul>
+                        <p><strong>Impacto:</strong> Melhor UX (usuário escolhe)</p>
+                    </div>
+                </div>
+
+                <h2>2. Qual é o Escopo Realista?</h2>
+                <div class="note">
+                    <strong>Escopo MÍNIMO (MVP - 2 semanas):</strong>
+                    <ul>
+                        <li>Adaptador Gemini para 5 prompts críticos</li>
+                        <li>Fallback automático</li>
+                        <li>Métricas básicas</li>
+                        <li>A/B test em staging</li>
+                    </ul>
+                </div>
+
+                <div class="success" style="margin-top: 1rem; padding: 1rem; border-left: 3px solid #22c55e;">
+                    <strong>Escopo COMPLETO (full migration - 6 semanas):</strong>
+                    <ul>
+                        <li>Todos os prompts do DeepSeek</li>
+                        <li>Load balancing inteligente</li>
+                        <li>Caching distribuído</li>
+                        <li>Dashboard Grafana completo</li>
+                        <li>Documentação + runbooks</li>
+                    </ul>
+                </div>
+
+                <h2>3. Qual é o Orçamento?</h2>
+                <pre><code>Custo Operacional (3 meses):
+
+Cenário A: DeepSeek (atual)
+  - 10k req/dia × 30 dias = 300k req/mês
+  - Custo: ~$1.500/mês
+
+Cenário B: Gemini (fallback)
+  - 90% via Gemini: ~$1.200/mês
+  - 10% DeepSeek: ~$150/mês
+  - Total: ~$1.350/mês
+  - Economia: $150/mês (10%)
+
+Cenário C: Ambos (redundância)
+  - 50% cada: ~$1.500 + 1.200 = $2.700/mês
+  - Premium de redundância: +$1.200/mês
+  - Apenas se uptime crítico
+
+Recomendação: Cenário B (Gemini como fallback)</code></pre>
+            </section>
+
+            <!-- Resumo -->
+            <section id="resumo" class="section">
+                <h1>📝 TL;DR & Próximos Passos</h1>
+
+                <h2>Resume Executivo</h2>
+                <div class="card">
+                    <div class="card-title">✅ O que mudou do plano original</div>
+                    <ul>
+                        <li><strong>Foco:</strong> Prompts (não código/arquitetura complexa)</li>
+                        <li><strong>Validação:</strong> Acuracidade realista (90%, não 95%)</li>
+                        <li><strong>Timeline:</strong> Semana 1 = decisão rápida (Go/No-Go)</li>
+                        <li><strong>Custo:</strong> Análise de impacto financeiro incluída</li>
+                        <li><strong>Risk:</strong> Fallback automático (não "tudo ou nada")</li>
+                    </ul>
+                </div>
+
+                <h2>Próximos Passos (Próximos 3 dias)</h2>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-title">Hoje: Decisão Estratégica</div>
+                        <ul class="checklist">
+                            <li>Confirmar objetivo (economizar? redundância? flexibilidade?)</li>
+                            <li>Validar orçamento</li>
+                            <li>Designar owner (quem lidera?)</li>
+                        </ul>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Amanhã: Setup Inicial</div>
+                        <ul class="checklist">
+                            <li>Criar repo: `github.com/org/guarda-migration`</li>
+                            <li>Setup CI/CD pipeline</li>
+                            <li>Provisionar Gemini API key + quota</li>
+                        </ul>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-title">Em 2 dias: Começar Semana 1</div>
+                        <ul class="checklist">
+                            <li>Extrair prompts do DeepSeek</li>
+                            <li>Configurar teste paralelo</li>
+                            <li>Agendamento de reunião Go/No-Go (sexta)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h2>Checklist Final</h2>
+                <ul class="checklist">
+                    <li class="done">Plano estruturado em 5 fases</li>
+                    <li class="done">Feedback crítico endereçado</li>
+                    <li class="done">Timeline realista (3 semanas MVP)</li>
+                    <li class="done">Métricas mensuráveis</li>
+                    <li class="done">Análise de risco/custo</li>
+                    <li>Aguardando: Decisão sobre objetivo</li>
+                    <li>Aguardando: Aprovação para começar</li>
+                </ul>
+
+                <h2>Êxito = Estes 3 Critérios</h2>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">🎯 Funcional</div>
+                        <p>Gemini consegue fazer 90%+ do trabalho de forma confiável</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">💰 Viável</div>
+                        <p>Custo ≤ orçamento. ROI positivo em < 6 meses</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🚀 Operacional</div>
+                        <p>Fallback automático. Zero manual intervention</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Navigation
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.dataset.section;
+                showSection(section);
+                link.classList.add('active');
+                navLinks.forEach(l => l !== link && l.classList.remove('active'));
+            });
+        });
+
+        function showSection(sectionId) {
+            sections.forEach(s => s.classList.remove('active'));
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Accordion
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const isActive = content.classList.contains('active');
+
+                document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+
+                if (!isActive) {
+                    content.classList.add('active');
+                    header.classList.add('active');
+                }
+            });
+        });
+
+        // Copy to clipboard
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-btn')) {
+                const code = e.target.nextElementSibling.textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    const originalText = e.target.textContent;
+                    e.target.textContent = '✓ Copiado!';
+                    setTimeout(() => {
+                        e.target.textContent = originalText;
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
