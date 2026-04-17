@@ -28,12 +28,12 @@ def test_modelo_codigo():
 
 
 def test_modelo_visao():
-    assert choose_model("vision") == "openai/gpt-4o"
+    assert choose_model("vision") == "openai/gpt-4o-mini"
 
 
 def test_modelo_analise():
-    assert choose_model("analysis") == "anthropic/claude-3.5-sonnet"
+    assert choose_model("analysis") == "anthropic/claude-3.7-sonnet"
 
 
 def test_modelo_chat():
-    assert choose_model("chat") == "nousresearch/hermes-3-llama-3.1-70b"
+    assert choose_model("chat") == "meta-llama/llama-3.3-70b-instruct"

@@ -12,7 +12,7 @@ def test_chat_retorna_resposta_e_modelo():
 
     assert isinstance(resposta, str)
     assert "olá" in resposta
-    assert modelo == "nousresearch/hermes-3-llama-3.1-70b"  # chat → hermes
+    assert modelo == "meta-llama/llama-3.3-70b-instruct"  # chat → llama
 
 
 def test_chat_usa_modelo_forcado():

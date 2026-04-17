@@ -17,15 +17,18 @@ from jarvas.intent_parser import parse
 
 
 def process(mensagem: str, session_ctx: SessionContext) -> str:
-    """Classifica a mensagem e executa o agent correto via Supervisor (com fallback)."""
-    try:
-        # Tenta rota via Supervisor primeiro (v0.5.0 final)
-        from jarvas.agents import supervisor
-        intent = parse(mensagem, session_ctx.project_path)
-        return supervisor.route(intent, session_ctx)
-    except (ImportError, AttributeError, Exception) as e:
-        # Fallback para handlers individuais se Supervisor não estiver disponível
+    """Classifica a mensagem e executa o agent correto via Supervisor (com fallback).
+
+    Controlado pela flag `JARVAS_USE_SUPERVISOR` (default "1"):
+    - "1" → Supervisor multi-agente (v0.5.0)
+    - "0" → handlers legados (pré-v0.5.0)
+    """
+    if os.environ.get("JARVAS_USE_SUPERVISOR", "1") == "0":
         return _process_with_handlers(mensagem, session_ctx)
+
+    from jarvas.agents import supervisor
+    intent = parse(mensagem, session_ctx.project_path)
+    return supervisor.route(intent, session_ctx)
 
 
 def _process_with_handlers(mensagem: str, session_ctx: SessionContext) -> str:
