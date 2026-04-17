@@ -11,7 +11,7 @@ class Intent:
     args: dict = field(default_factory=dict)
 
 
-_FILE_EXTS = r'(\S+\.(pdf|xlsx|xls|csv|docx|txt|jpg|jpeg|png))'
+_FILE_EXTS = r'(\S+\.(pdf|xlsx|xls|csv|docx|txt|jpg|jpeg|png|py|js|ts|json|yaml|yml|md|html|css|sh|toml|ini|cfg|rs|go|java|cpp|c|rb))'
 _OCR_WORDS = {"ocr", "extraia texto", "leia a imagem", "gere excel", "extraia texto da imagem"}
 _EDIT_WORDS = [
     "edite", "edita", "editar",
@@ -23,7 +23,15 @@ _EDIT_WORDS = [
     "modifique", "modifica", "modificar",
     "atualize", "atualiza", "atualizar",
 ]
-_READ_WORDS = ["leia", "mostra", "abra", "ver o arquivo", "mostre o arquivo"]
+_READ_WORDS = [
+    "leia", "lê", "ler",
+    "mostra", "mostre", "mostrar",
+    "abra", "abre", "abrir",
+    "ver o arquivo", "mostre o arquivo",
+    "analisa esse arquivo", "analise esse arquivo",
+    "analisa o arquivo", "analise o arquivo",
+    "veja", "ver",
+]
 _DEBATE_WORDS = ["debate", "peça um debate", "debate sobre"]
 _MEMORY_WORDS = ["armazene", "guarda isso", "salva isso", "memorize"]
 _WEB_WORDS = ["pesquise", "busque na web", "procure sobre"]
@@ -38,7 +46,7 @@ def parse(mensagem: str, project_ctx: str | None = None) -> Intent:
     if m:
         return Intent(type="SET_PROJECT", raw=mensagem, args={"path": m.group(1)})
 
-    # 2. ATTACH / OCR — extensao de arquivo no texto
+    # 2. ATTACH / OCR / FILE_READ / FILE_EDIT — extensao de arquivo no texto
     m = re.search(_FILE_EXTS, mensagem, re.IGNORECASE)
     if m:
         path = m.group(1)
@@ -47,6 +55,13 @@ def parse(mensagem: str, project_ctx: str | None = None) -> Intent:
             return Intent(type="OCR", raw=mensagem, args={"path": path})
         if any(w in lower for w in _OCR_WORDS):
             return Intent(type="OCR", raw=mensagem, args={"path": path})
+        # Arquivo de código/texto: EDIT ou READ antes de cair em ATTACH
+        code_exts = {"py", "js", "ts", "json", "yaml", "yml", "md", "html", "css",
+                     "sh", "toml", "ini", "cfg", "rs", "go", "java", "cpp", "c", "rb", "txt"}
+        if ext in code_exts:
+            if any(w in lower for w in _EDIT_WORDS):
+                return Intent(type="FILE_EDIT", raw=mensagem, args={"instruction": mensagem, "path": path})
+            return Intent(type="FILE_READ", raw=mensagem, args={"instruction": mensagem, "path": path})
         return Intent(type="ATTACH", raw=mensagem, args={"path": path, "file_type": ext})
 
     # 3. FILE_EDIT — trigger + nome de arquivo com extensão
