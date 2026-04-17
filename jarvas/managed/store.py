@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from .models import (
     AgentCreate, AgentRecord, AgentUpdate,
@@ -61,7 +61,7 @@ def update_agent(agent_id: str, data: AgentUpdate) -> AgentRecord:
     
     # Increment version and update timestamp
     record.version += 1
-    record.updated_at = datetime.utcnow()
+    record.updated_at = datetime.now(timezone.utc)
     
     # Save to versions
     _versions[agent_id].append(record)
@@ -73,7 +73,7 @@ def archive_agent(agent_id: str) -> AgentRecord:
         raise ValueError(f"Agent {agent_id} not found")
     
     record = _agents[agent_id]
-    record.archived_at = datetime.utcnow()
+    record.archived_at = datetime.now(timezone.utc)
     return record
 
 def list_agent_versions(agent_id: str) -> List[AgentRecord]:
@@ -122,7 +122,7 @@ def get_session(session_id: str) -> Optional[SessionRecord]:
 def set_session_status(session_id: str, status: str) -> None:
     if session_id in _sessions:
         _sessions[session_id].status = status
-        _sessions[session_id].updated_at = datetime.utcnow()
+        _sessions[session_id].updated_at = datetime.now(timezone.utc)
 
 # ── Events ──────────────────────────────────────────────────────────
 
