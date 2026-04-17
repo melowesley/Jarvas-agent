@@ -1,6 +1,7 @@
 """Le e edita arquivos do projeto com seguranca."""
 from __future__ import annotations
 import difflib
+import os
 from pathlib import Path
 
 from jarvas.guard_pipeline import run_edit
@@ -25,13 +26,30 @@ def _is_blocked(p: Path) -> bool:
     )
 
 
+def find_file_in_project(filename: str, project_path: str) -> str | None:
+    """Busca arquivo na pasta do projeto ignorando case e variações de encoding."""
+    if not project_path or not os.path.isdir(project_path):
+        return None
+    filename_lower = filename.lower()
+    for f in os.listdir(project_path):
+        if f.lower() == filename_lower:
+            return os.path.join(project_path, f)
+    return None
+
+
 def read_file(path: str, project_base: str | None = None) -> str:
     """Le arquivo e retorna conteudo como string."""
     p = _resolve(path, project_base)
     if _is_blocked(p):
         return f"[erro] Acesso bloqueado: {p.name}"
-    if not p.exists():
-        return f"[erro] Arquivo nao encontrado: {p}"
+    if not p.exists() and project_base:
+        found = find_file_in_project(Path(path).name, project_base)
+        if found:
+            p = Path(found)
+        else:
+            return f"[erro] Arquivo nao encontrado: {Path(path).name}"
+    elif not p.exists():
+        return f"[erro] Arquivo nao encontrado: {p.name}"
     return p.read_text(encoding="utf-8")
 
 

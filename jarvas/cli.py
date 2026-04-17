@@ -6,11 +6,11 @@ from rich.console import Console
 from rich.markdown import Markdown
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
-from jarvas.context import SessionContext
+from jarvas.session import get_session
 from jarvas.orchestrator import process as orchestrator_process
 
 console = Console()
-_ctx = SessionContext()
+_ctx = get_session()
 
 
 def _exibir_resposta(texto: str, modelo: str):

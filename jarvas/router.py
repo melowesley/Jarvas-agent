@@ -1,6 +1,8 @@
 # jarvas/router.py
 """Detecção de tipo de tarefa por palavras-chave e seleção de modelo."""
 
+from jarvas.model_registry import resolve_with_fallback
+
 # IMPORTANTE: A ordem das chaves define a prioridade de detecção.
 # "analysis" deve vir antes de "code" para que mensagens como
 # "analise esse código" sejam roteadas para analysis e não para code
@@ -22,10 +24,10 @@ _PALAVRAS_CHAVE = {
 }
 
 _MODELOS = {
-    "code": "meta-llama/llama-3.3-70b-instruct",
-    "vision": "openai/gpt-4o",
-    "analysis": "anthropic/claude-3.5-sonnet",
-    "chat": "nousresearch/hermes-3-llama-3.1-70b",
+    "code":     "meta-llama/llama-3.3-70b-instruct",
+    "vision":   "openai/gpt-4o-mini",
+    "analysis": "anthropic/claude-3.7-sonnet",
+    "chat":     "meta-llama/llama-3.3-70b-instruct",
 }
 
 
@@ -43,5 +45,8 @@ def detect_task_type(mensagem: str) -> str:
 
 
 def choose_model(tipo: str) -> str:
-    """Retorna o ID do modelo OpenRouter para o tipo de tarefa."""
-    return _MODELOS.get(tipo, _MODELOS["chat"])
+    """Retorna o ID do modelo OpenRouter para o tipo de tarefa.
+    Resolve o modelo com fallback automático se necessário.
+    """
+    base = _MODELOS.get(tipo, _MODELOS["chat"])
+    return resolve_with_fallback(base)

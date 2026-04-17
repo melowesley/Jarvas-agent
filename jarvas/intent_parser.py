@@ -13,7 +13,16 @@ class Intent:
 
 _FILE_EXTS = r'(\S+\.(pdf|xlsx|xls|csv|docx|txt|jpg|jpeg|png))'
 _OCR_WORDS = {"ocr", "extraia texto", "leia a imagem", "gere excel", "extraia texto da imagem"}
-_EDIT_WORDS = ["edite", "melhore", "corrija", "reescreva", "refatore"]
+_EDIT_WORDS = [
+    "edite", "edita", "editar",
+    "melhore", "melhora", "melhorar",
+    "corrija", "corrige", "corrigir",
+    "reescreva", "reescreve", "reescrever",
+    "refatore", "refatora", "refatorar",
+    "adicione", "adiciona", "adicionar",
+    "modifique", "modifica", "modificar",
+    "atualize", "atualiza", "atualizar",
+]
 _READ_WORDS = ["leia", "mostra", "abra", "ver o arquivo", "mostre o arquivo"]
 _DEBATE_WORDS = ["debate", "peça um debate", "debate sobre"]
 _MEMORY_WORDS = ["armazene", "guarda isso", "salva isso", "memorize"]
@@ -40,8 +49,8 @@ def parse(mensagem: str, project_ctx: str | None = None) -> Intent:
             return Intent(type="OCR", raw=mensagem, args={"path": path})
         return Intent(type="ATTACH", raw=mensagem, args={"path": path, "file_type": ext})
 
-    # 3. FILE_EDIT
-    if any(w in lower for w in _EDIT_WORDS):
+    # 3. FILE_EDIT — trigger + nome de arquivo com extensão
+    if any(w in lower for w in _EDIT_WORDS) and re.search(r'\w+\.\w{2,4}', lower):
         return Intent(type="FILE_EDIT", raw=mensagem, args={"instruction": mensagem})
 
     # 4. FILE_READ
