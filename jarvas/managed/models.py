@@ -13,6 +13,8 @@ class AgentCreate(BaseModel):
     callable_agents: list[str] = []     # IDs de outros AgentRecords
     description: str | None = None
     metadata: dict = {}
+    # v0.5.0: escopo de memória do agent (session | project | global)
+    memory_scope: Literal["session", "project", "global"] = "session"
 
 class AgentRecord(AgentCreate):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -31,6 +33,7 @@ class AgentUpdate(BaseModel):
     callable_agents: list[str] | None = None
     description: str | None = None
     metadata: dict | None = None
+    memory_scope: Literal["session", "project", "global"] | None = None
 
 # ── Skill ──────────────────────────────────────────────────────────
 class SkillCreate(BaseModel):

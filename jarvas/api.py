@@ -18,7 +18,7 @@ async def lifespan(app):
     seed_preset_agents()
     yield
 
-app = FastAPI(title="Jarvas API", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Jarvas API", version="0.5.0", lifespan=lifespan)
 app.include_router(managed_router)
 app.include_router(autoescola_router)
 
@@ -89,7 +89,7 @@ async def autoescola_ui():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.4.0"}
+    return {"status": "ok", "version": "0.5.0"}
 
 
 @app.get("/status")

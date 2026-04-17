@@ -8,10 +8,15 @@ Assistente de IA distribuído com múltiplos guardas especializados, roteamento 
 
 Jarvas é um assistente de linha de comando que orquestra diferentes modelos de IA de acordo com o tipo de tarefa. Em vez de depender de um único modelo, ele roteia cada mensagem para o modelo mais adequado e expõe guardas especializados (Gemini e DeepSeek) para tarefas específicas.
 
-A versão **0.3.0** introduz:
-- Backend gerenciado (FastAPI) com sessões isoladas e Chat UI
-- Agente local via Ollama/Gemma com ferramentas VSCode nativas
-- **Mineração automática de progresso** — Gemini e DeepSeek observam cada conversa encerrada e salvam aprendizados no MemPalace
+A versão **0.5.0** (final) introduz:
+- **Multi-agente formal** — `AgentProtocol` Pydantic, Supervisor único (`jarvas.agents.supervisor`), registry de agentes (`hermes`, `gemini_analyst`, `deepseek_coder`, `memory_miner`, `file_editor`, `autoescola_specialist`, `uiux_specialist`, `vscode_executor`).
+- **Estratégias como tools** — `PipelineStrategy` e `DebateStrategy` invocáveis via `call_strategy` no toolset unificado.
+- **Tool registry hardened** — `managed/toolset.py` com schemas Pydantic, idempotência (`tool_call_id` determinístico), preview/`require_confirm` em tools destrutivas, whitelist por Environment, detecção/masking de segredos.
+- **Observabilidade** — endpoint `GET /v1/sessions/{id}/dump` (snapshot completo de debug) + logs estruturados JSON em stderr (`agent_name`, `session_id`, `turn_id`, `tool_name`, `duration_ms`). Desligável via `JARVAS_STRUCTURED_LOGS=0`.
+- **MemPalace enriquecido** — metadados `agent_name`, `delegation_path`, `hash_conteudo` (dedupe), `confidence` em cada aprendizado minerado.
+
+Versões anteriores:
+- **0.3.0** — Backend gerenciado (FastAPI) com sessões isoladas e Chat UI; agente local via Ollama/Gemma com ferramentas VSCode nativas; mineração automática de progresso.
 
 ```
 você > Como funciona o roteamento do Jarvas?
