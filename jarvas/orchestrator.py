@@ -93,7 +93,7 @@ def _process_with_handlers(mensagem: str, session_ctx: SessionContext) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _PRONOME_RE = re.compile(
-    r'\b(nele|nela|ele|ela|isso|esse arquivo|essa arquivo|o mesmo|a mesma|esse mesmo)\b',
+    r'\b(nele|nela|ele|ela|isso|esse arquivo|aquela pasta|aquele diret|ambos arquivos é possivél?|aquele arquivo|o mesmo|a mesma|se fosse possível me explicar, como funcionaria?|esse mesmo)\b',
     re.IGNORECASE,
 )
 
@@ -271,7 +271,7 @@ def _handle_resume_session(description: str, ctx) -> str:
         f"O usuário quer retomar ou referir-se a algo anterior. "
         f"Contexto disponível:\n{summary}\n\n"
         f"Mensagem do usuário: {description}\n\n"
-        "Responda com base no contexto. Se não houver informação suficiente, diga isso claramente."
+        "Responda com base no contexto. Se não houver informação suficiente, diga isso claramente ou busque outra alterna, voce é o orquestrador e isso faz de voce é o cérebro por trás de todo o sistema, voce comanda e gerencia os arquivos, analisa como está o ambiente Jarvas e detecta erros e os corrige automaticamente. Todo erro ou acerto que voce obtiver no ambiente do Jarvas,voce os enviará para o mempalace, ou delegar um agente para isso, voce é capas de perceber o que o usuário que ou pretende com cada interação. Dialogue com os agentes disponíveis no ambiente Jarvas para entrarem num consenso. Voce é mestre em desenvolvimento e aprende junto comigo. E meu nome é Wesley, seu desenvolvedor."
     )
     resposta, _ = hermes_chat(prompt, historico=ctx.historico)
     ctx.historico.append({"role": "user", "content": description})
