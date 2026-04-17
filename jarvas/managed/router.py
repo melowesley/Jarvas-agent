@@ -186,3 +186,52 @@ async def post_tool_result(session_id: str, data: ToolResultRequest):
     if not found:
         raise HTTPException(status_code=404, detail="No pending tool call with this ID")
     return {"ok": True}
+
+
+@managed_router.get("/sessions/{session_id}/dump")
+async def get_session_dump(session_id: str):
+    """v0.5.0: snapshot completo de debug de uma sessão.
+
+    Retorna agent/environment/metadata + histórico reconstruído + lista de
+    tool_calls e delegações inferidas dos eventos persistidos. Útil para
+    diagnóstico quando um turno falha ou loop infinito é suspeitado.
+    """
+    from .store import reconstruct_history
+
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    events = get_events(session_id)
+    agent = get_agent(session.agent_id) if session.agent_id else None
+    env = None
+    if session.environment_id:
+        env = get_environment(session.environment_id)
+
+    tool_calls: list[dict] = []
+    delegations: list[dict] = []
+    for e in events:
+        if e.get("type") == "agent.tool_use":
+            tool_calls.append({
+                "tool_call_id": e.get("tool_call_id"),
+                "tool_name": e.get("tool_name"),
+                "tool_input": e.get("tool_input"),
+                "timestamp": e.get("timestamp"),
+            })
+        elif e.get("type") == "agent.delegation":
+            delegations.append({
+                "from": e.get("from"),
+                "to": e.get("to"),
+                "depth": e.get("depth"),
+                "timestamp": e.get("timestamp"),
+            })
+
+    return {
+        "session": session,
+        "agent": agent,
+        "environment": env,
+        "history": reconstruct_history(session_id),
+        "events_count": len(events),
+        "tool_calls": tool_calls,
+        "delegations": delegations,
+    }

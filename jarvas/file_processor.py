@@ -96,14 +96,31 @@ def process_file(
     session_id: str,
 ) -> dict:
     """Extrai conteudo do arquivo, processa com IA e salva resultado."""
+    import os
     from jarvas.hermes_client import chat as hermes_chat
+    from jarvas.file_editor import find_file_in_project
 
-    content = extract_content(path)
+    # Resolucao case-insensitive: se o path nao existe diretamente, busca no projeto
+    resolved = path
+    if not Path(path).exists() and project_base:
+        found = find_file_in_project(Path(path).name, project_base)
+        if found:
+            resolved = found
+        else:
+            available = ", ".join(os.listdir(project_base)) if os.path.isdir(project_base) else "—"
+            return {
+                "error": (
+                    f"'{Path(path).name}' não encontrado em {project_base}\n"
+                    f"Arquivos disponíveis: {available}"
+                )
+            }
+
+    content = extract_content(resolved)
     if content.startswith("[erro]"):
         return {"error": content}
 
     prompt = (
-        f"Arquivo: {Path(path).name}\n"
+        f"Arquivo: {Path(resolved).name}\n"
         f"Conteudo extraido:\n{content[:8000]}\n\n"
         f"Instrucao: {instruction}\n\n"
         "Execute a instrucao. Para dados tabulares, use formato TSV "
@@ -119,12 +136,12 @@ def process_file(
     else:
         out_format = "txt"
 
-    out_path = _write_output(resp, path, project_base, out_format)
+    out_path = _write_output(resp, resolved, project_base, out_format)
 
     save_attachment(
         session_id,
-        Path(path).name,
-        Path(path).suffix.lstrip("."),
+        Path(resolved).name,
+        Path(resolved).suffix.lstrip("."),
         content[:2000],
         resp[:2000],
     )
@@ -132,5 +149,5 @@ def process_file(
     return {
         "output_path": out_path,
         "summary": resp[:500],
-        "file_type": Path(path).suffix,
+        "file_type": Path(resolved).suffix,
     }

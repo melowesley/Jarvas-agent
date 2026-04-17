@@ -5,6 +5,7 @@ from __future__ import annotations
 from jarvas.guard_gemini import chat as gemini_chat, web_search as gemini_web
 from jarvas.guard_deepseek import chat as deepseek_chat, web_search as deepseek_web
 from jarvas.debate import run_debate, format_debate_result
+from jarvas.model_registry import resolve_with_fallback, list_aliases, get_available_models
 
 
 def dispatch(comando: str, historico: list[dict]) -> str:
@@ -19,6 +20,14 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         return _guarda_g(args)
     if cmd == "/d":
         return _guarda_d(args)
+    if cmd == "/r1":
+        if not args:
+            return "[red]Uso:[/red] /r1 <prompt>"
+        return _call_alias("r1", args)
+    if cmd == "/claude":
+        if not args:
+            return "[red]Uso:[/red] /claude <prompt>"
+        return _call_alias("claude", args)
     if cmd == "/debate":
         if not args:
             return "[red]Uso:[/red] /debate <tópico>"
@@ -26,8 +35,14 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         return format_debate_result(resultado)
     if cmd == "/hopen":
         if not args:
-            return "[red]Uso:[/red] /hopen <model-id>"
-        return f"[yellow]Próxima mensagem usará o modelo:[/yellow] {args}"
+            return "[red]Uso:[/red] /hopen <alias-ou-model-id>"
+        resolved = resolve_with_fallback(args.strip())
+        return f"[yellow]Próxima mensagem usará o modelo:[/yellow] {resolved}"
+    if cmd == "/modelos":
+        return list_aliases()
+    if cmd == "/atualizar-modelos":
+        models = get_available_models(force_refresh=True)
+        return f"[green]Cache atualizado.[/green] {len(models)} modelos disponíveis no OpenRouter."
     if cmd == "/hmem":
         return _hmem(args)
     if cmd == "/session":
@@ -41,10 +56,14 @@ def _help() -> str:
         "\n[bold]Comandos Jarvas:[/bold]\n"
         "  [cyan]/g[/cyan] <prompt>            → Gemini diretamente\n"
         "  [cyan]/g web[/cyan] <busca>         → Gemini + busca web\n"
-        "  [cyan]/d[/cyan] <prompt>            → DeepSeek diretamente\n"
+        "  [cyan]/d[/cyan] <prompt>            → DeepSeek diretamente (alias: deep)\n"
         "  [cyan]/d web[/cyan] <busca>         → DeepSeek + busca web\n"
+        "  [cyan]/r1[/cyan] <prompt>           → DeepSeek R1 diretamente\n"
+        "  [cyan]/claude[/cyan] <prompt>       → Claude diretamente (alias: sonnet, haiku, opus)\n"
         "  [cyan]/debate[/cyan] <tópico>       → Debate Gemini vs DeepSeek\n"
-        "  [cyan]/hopen[/cyan] <model-id>      → Forçar modelo específico\n"
+        "  [cyan]/hopen[/cyan] <alias>         → Força modelo específico para próxima mensagem\n"
+        "  [cyan]/modelos[/cyan]               → Lista todos os aliases e modelos disponíveis\n"
+        "  [cyan]/atualizar-modelos[/cyan]     → Força atualização do cache de modelos\n"
         "\n[bold yellow]⚠️  MemPalace (limitado no Python 3.13/Windows):[/bold yellow]\n"
         "  [cyan]/hmem status[/cyan]           → Status do MemPalace\n"
         "  [cyan]/hmem list[/cyan]             → Listar wings\n"
@@ -61,6 +80,14 @@ def _help() -> str:
         "  [cyan]/session send[/cyan] <id> <msg> → Enviar mensagem para sessão\n"
         "  [cyan]/session history[/cyan] <id>  → Ver histórico da sessão\n"
     )
+
+
+def _call_alias(alias: str, prompt: str) -> str:
+    """Chama qualquer modelo pelo alias usando hermes_client com modelo forçado."""
+    from jarvas.hermes_client import chat as hermes_chat
+    model = resolve_with_fallback(alias)
+    resposta, modelo_usado = hermes_chat(prompt, modelo=model)
+    return f"[cyan]{modelo_usado}:[/cyan]\n{resposta}"
 
 
 def _guarda_g(args: str) -> str:

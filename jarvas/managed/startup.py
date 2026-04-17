@@ -7,18 +7,21 @@ PRESET_AGENTS = [
     {
         "name": "hermes",
         "model": "nousresearch/hermes-3-llama-3.1-70b",
-        "tools": ["bash", "write", "read", "web_search"],
+        "tools": ["bash", "write", "read", "web_search", "call_strategy"],
         "callable_agents": [],  # to be populated
+        "memory_scope": "session",
     },
     {
         "name": "gemini-guard",
         "model": "gemini-2.5-flash",
         "tools": ["web_search", "read"],
+        "memory_scope": "session",
     },
     {
         "name": "deepseek-guard",
         "model": "deepseek/deepseek-chat",
         "tools": ["read", "write"],
+        "memory_scope": "session",
     },
     {
         "name": "gemma-local",
@@ -32,6 +35,50 @@ PRESET_AGENTS = [
         ),
         "tools": ["read", "web_search", "vscode_open", "vscode_edit", "vscode_terminal", "vscode_list"],
         "description": "Agente local via Ollama/Gemma 4 — edita o VSCode diretamente sem depender de nuvem",
+        "memory_scope": "project",
+    },
+    # ── v0.5.0: agents formalizados do registry legacy ──────────────
+    {
+        "name": "gemini_analyst",
+        "model": "gemini-2.5-flash",
+        "tools": ["web_search", "read"],
+        "memory_scope": "session",
+        "description": "Analista semântico — mineração e busca web.",
+    },
+    {
+        "name": "deepseek_coder",
+        "model": "deepseek/deepseek-chat",
+        "tools": ["read", "write", "bash"],
+        "memory_scope": "session",
+        "description": "Arquivista de código e dados.",
+    },
+    {
+        "name": "memory_miner",
+        "model": "gemini-2.5-flash",
+        "tools": ["read"],
+        "memory_scope": "global",
+        "description": "Minerador de conversa → MemPalace.",
+    },
+    {
+        "name": "file_editor",
+        "model": "openrouter/auto",
+        "tools": ["read", "write"],
+        "memory_scope": "project",
+        "description": "Leitor/editor/processador de arquivos do projeto.",
+    },
+    {
+        "name": "autoescola_specialist",
+        "model": "openrouter/auto",
+        "tools": ["read"],
+        "memory_scope": "project",
+        "description": "Professor do curriculum Autoescola Jarvas.",
+    },
+    {
+        "name": "uiux_specialist",
+        "model": "openrouter/auto",
+        "tools": ["read", "write"],
+        "memory_scope": "project",
+        "description": "Especialista UI/UX Pro Max.",
     },
 ]
 
