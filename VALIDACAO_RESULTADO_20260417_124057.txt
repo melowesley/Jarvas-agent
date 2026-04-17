@@ -1,0 +1,57 @@
+Relatorio de validacao Jarvas v0.5.0 - 17/04/2026 12:40:57
+[12:40:57] [INFO] Inicio da validacao local.
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Estrutura ---
+[12:40:57] [SUCCESS] [OK] Diretorio principal jarvas/
+[12:40:57] [SUCCESS] [OK] Modulo jarvas/agents/
+[12:40:57] [SUCCESS] [OK] Modulo jarvas/managed/
+[12:40:57] [SUCCESS] [OK] Modulo jarvas/miners/
+[12:40:57] [SUCCESS] [OK] Diretorio tests/
+[12:40:57] [SUCCESS] [OK] Diretorio docs/
+[12:40:57] [INFO] Resultado estrutura: 6/6
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Arquivos criticos ---
+[12:40:57] [SUCCESS] [OK] pyproject.toml
+[12:40:57] [SUCCESS] [OK] README.md
+[12:40:57] [SUCCESS] [OK] jarvas/api.py
+[12:40:57] [SUCCESS] [OK] jarvas/cli.py
+[12:40:57] [SUCCESS] [OK] jarvas/orchestrator.py
+[12:40:57] [SUCCESS] [OK] jarvas/router.py
+[12:40:57] [SUCCESS] [OK] jarvas/managed/toolset.py
+[12:40:57] [SUCCESS] [OK] jarvas/agents/supervisor.py
+[12:40:57] [INFO] Resultado arquivos: 8/8
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Documentacao ---
+[12:40:57] [SUCCESS] [OK] docs/PLANO-v0.5.0-MULTIAGENTE.md
+[12:40:57] [SUCCESS] [OK] docs/PLANO-MIGRACAO.md
+[12:40:57] [INFO] Resultado documentacao: 2/2
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Versao ---
+[12:40:57] [INFO] Versao encontrada: 0.5.0
+[12:40:57] [SUCCESS] [OK] Versao alinhada com v0.5.0
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Cache Python ---
+[12:40:57] [WARNING] Foram encontrados 69 diretorios __pycache__.
+[12:40:57] [INFO] 
+[12:40:57] [INFO] --- Git ---
+[12:40:57] [SUCCESS] [OK] Repositorio Git detectado.
+[12:40:57] [INFO] Branch atual: claude/jarvas-multi-agent-ldGTT
+[12:40:57] [INFO] Relacao com origin/main: behind=0 | ahead=3
+[12:40:57] [WARNING] HEAD esta a frente de origin/main em 3 commit(s); revisar antes de merge.
+[12:40:58] [WARNING] Nao foi possivel ler git status --porcelain.
+[12:40:58] [WARNING] Arquivo(s) .swp em .git detectado(s): .MERGE_MSG.swp
+[12:40:58] [SUCCESS] [OK] Sem merge pendente.
+[12:40:58] [WARNING] Lock residual detectado em hermes-agent/.git/index.lock.
+[12:40:58] [INFO] 
+[12:40:58] [INFO] --- Testes ---
+[12:40:58] [INFO] Arquivos de teste encontrados: 26
+[12:40:58] [SUCCESS] [OK] Suite de testes detectada.
+[12:40:58] [INFO] Observacao: o script nao executa pytest; apenas confirma presenca dos testes.
+[12:40:58] [INFO] 
+[12:40:58] [INFO] --- Resumo final ---
+[12:40:58] [INFO] Score estrutural: 100% (16/16)
+[12:40:58] [INFO] Avisos: 5
+[12:40:58] [INFO] Criticos: 0
+[12:40:58] [WARNING] STATUS GERAL: COM RESSALVAS OPERACIONAIS
+[12:40:58] [INFO] Relatorio salvo em: C:\Users\Computador\OneDrive\Desktop\jarvas\VALIDACAO_RESULTADO_20260417_124057.txt
+[12:40:58] [INFO] Fim da validacao.
