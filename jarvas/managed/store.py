@@ -1,6 +1,7 @@
 # jarvas/managed/store.py
 
 import asyncio
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 from .models import (
@@ -19,6 +20,8 @@ _sessions: Dict[str, SessionRecord] = {}
 _events: Dict[str, List[dict]] = {}
 _queues: Dict[str, asyncio.Queue] = {}
 _pending_tool_results: Dict[str, tuple] = {}  # tool_call_id → (asyncio.Event, result|None)
+_resolved_tool_ids: Dict[str, float] = {}    # tool_call_id → timestamp (TTL dedup)
+_RESOLVED_TTL = 300  # 5 minutos
 
 # ── Agents ──────────────────────────────────────────────────────────
 
@@ -196,15 +199,32 @@ def register_pending_tool(tool_call_id: str) -> asyncio.Event:
     _pending_tool_results[tool_call_id] = (event, None)
     return event
 
-def resolve_pending_tool(tool_call_id: str, output: str, is_error: bool) -> bool:
-    """Resolve um tool_call pendente com o resultado da extensão. Retorna True se encontrou."""
+def resolve_pending_tool(tool_call_id: str, output: str, is_error: bool) -> str:
+    """Resolve um tool_call pendente. Retorna 'resolved', 'duplicate' ou 'not_found'."""
+    # Purge expired resolved IDs
+    now = time.monotonic()
+    expired = [k for k, ts in _resolved_tool_ids.items() if now - ts > _RESOLVED_TTL]
+    for k in expired:
+        _resolved_tool_ids.pop(k, None)
+
+    # Idempotência: já resolvido anteriormente
+    if tool_call_id in _resolved_tool_ids:
+        return "duplicate"
+
     pending = _pending_tool_results.get(tool_call_id)
     if not pending:
-        return False
-    event, _ = pending
+        return "not_found"
+
+    event, existing = pending
+    if existing is not None:
+        # Resultado já preenchido mas ainda não consumido — tratar como duplicate
+        _resolved_tool_ids[tool_call_id] = now
+        return "duplicate"
+
     _pending_tool_results[tool_call_id] = (event, (output, is_error))
+    _resolved_tool_ids[tool_call_id] = now
     event.set()
-    return True
+    return "resolved"
 
 def pop_pending_tool_result(tool_call_id: str) -> tuple[str, bool] | None:
     """Remove e retorna o resultado de um tool_call resolvido."""

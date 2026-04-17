@@ -182,10 +182,10 @@ async def post_tool_result(session_id: str, data: ToolResultRequest):
     session = get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    found = resolve_pending_tool(data.tool_call_id, data.output, data.is_error)
-    if not found:
+    status = resolve_pending_tool(data.tool_call_id, data.output, data.is_error)
+    if status == "not_found":
         raise HTTPException(status_code=404, detail="No pending tool call with this ID")
-    return {"ok": True}
+    return {"ok": True, "duplicate": status == "duplicate"}
 
 
 @managed_router.get("/sessions/{session_id}/dump")

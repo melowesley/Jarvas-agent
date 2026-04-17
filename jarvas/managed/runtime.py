@@ -25,7 +25,7 @@ GEMINI_PREFIXES = ("gemini", "google/")
 OLLAMA_PREFIXES = ("ollama/", "gemma", "llama", "mistral", "phi")
 MAX_DEPTH = 3
 MAX_CYCLES = 10
-VSCODE_TOOL_TIMEOUT = 60  # seconds to wait for VSCode callback
+VSCODE_TOOL_TIMEOUT = int(os.getenv("VSCODE_TOOL_TIMEOUT", "60"))
 
 
 # ── Model dispatch ───────────────────────────────────────────────────
@@ -364,6 +364,10 @@ async def run_agent_loop(
                 except asyncio.TimeoutError:
                     pop_pending_tool_result(tc["id"])
                     output, is_error = "Timeout: VSCode extension did not respond in time", True
+                    await enqueue(queue, session_id, "agent.tool_timeout", {
+                        "tool_call_id": tc["id"],
+                        "tool_name": tc["name"],
+                    })
             elif tc["name"] == "call_agent":
                 output, is_error = await invoke_callable_agent(tc["input"], session_id, depth=depth + 1)
             else:

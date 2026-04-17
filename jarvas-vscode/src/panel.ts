@@ -27,7 +27,7 @@ function findJarvasExecutable(): string {
 
 async function isServerReady(): Promise<boolean> {
     try {
-        const res = await fetch('http://localhost:8000/v1/agents', { signal: AbortSignal.timeout(2000) });
+        const res = await fetch('http://localhost:8080/v1/agents', { signal: AbortSignal.timeout(2000) });
         return res.ok;
     } catch {
         return false;
@@ -136,7 +136,7 @@ export class ChatPanel {
 
     private async _loadAgents(): Promise<void> {
         try {
-            const res = await fetch('http://localhost:8000/v1/agents');
+            const res = await fetch('http://localhost:8080/v1/agents');
             const agents = await res.json();
             this._panel.webview.postMessage({ type: 'agents', agents });
         } catch (e) {
@@ -150,7 +150,7 @@ export class ChatPanel {
         if (!this._sessionId || this._agentId !== agentId) {
             try {
                 const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
-                const res = await fetch('http://localhost:8000/v1/sessions', {
+                const res = await fetch('http://localhost:8080/v1/sessions', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ agent_id: agentId, title: 'VSCode Chat', workspace_path: workspacePath })
@@ -166,14 +166,14 @@ export class ChatPanel {
 
         // Enviar mensagem
         try {
-            await fetch(`http://localhost:8000/v1/sessions/${this._sessionId}/events`, {
+            await fetch(`http://localhost:8080/v1/sessions/${this._sessionId}/events`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ content: text })
             });
 
             // Ler SSE stream
-            const stream = await fetch(`http://localhost:8000/v1/sessions/${this._sessionId}/stream`);
+            const stream = await fetch(`http://localhost:8080/v1/sessions/${this._sessionId}/stream`);
             const reader = stream.body!.getReader();
             const decoder = new TextDecoder();
             let done = false;
@@ -189,7 +189,7 @@ export class ChatPanel {
                     if (event.type === 'agent.tool_use' && event.awaiting_callback) {
                         const result = await this._executeVSCodeTool(event.tool_name, event.tool_input);
                         try {
-                            await fetch(`http://localhost:8000/v1/sessions/${this._sessionId}/tool_result`, {
+                            await fetch(`http://localhost:8080/v1/sessions/${this._sessionId}/tool_result`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -200,6 +200,24 @@ export class ChatPanel {
                             });
                         } catch (e) {
                             console.error('Failed to post tool_result:', e);
+                        }
+                    }
+
+                    // Retry se a extensão não respondeu a tempo
+                    if (event.type === 'agent.tool_timeout') {
+                        const retry = await this._executeVSCodeTool(event.tool_name, event.tool_input ?? {});
+                        try {
+                            await fetch(`http://localhost:8080/v1/sessions/${this._sessionId}/tool_result`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    tool_call_id: event.tool_call_id,
+                                    output: retry.output,
+                                    is_error: retry.is_error,
+                                }),
+                            });
+                        } catch (e) {
+                            console.error('Failed to retry tool_result after timeout:', e);
                         }
                     }
 
@@ -246,6 +264,7 @@ export class ChatPanel {
                 const end = doc.positionAt(idx + input.old_text.length);
                 edit.replace(uri, new vscode.Range(start, end), input.new_text);
                 await vscode.workspace.applyEdit(edit);
+                await doc.save();
                 return { output: `Edited ${filePath}`, is_error: false };
             }
 
