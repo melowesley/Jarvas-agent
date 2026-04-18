@@ -32,6 +32,12 @@ _READ_WORDS = [
     "analisa o arquivo", "analise o arquivo",
     "veja", "ver",
 ]
+_READ_WORDS_RE = re.compile(
+    r'\b(leia|lê|ler|mostra|mostre|mostrar|abra|abre|abrir|veja|ver)\b'
+    r'|ver o arquivo|mostre o arquivo'
+    r'|analis[ae] (esse |o )?arquivo',
+    re.IGNORECASE,
+)
 _DEBATE_WORDS = ["debate", "peça um debate", "debate sobre"]
 _MEMORY_WORDS = ["armazene", "guarda isso", "salva isso", "memorize"]
 _WEB_WORDS = ["pesquise", "busque na web", "procure sobre"]
@@ -68,8 +74,8 @@ def parse(mensagem: str, project_ctx: str | None = None) -> Intent:
     if any(w in lower for w in _EDIT_WORDS) and re.search(r'\w+\.\w{2,4}', lower):
         return Intent(type="FILE_EDIT", raw=mensagem, args={"instruction": mensagem})
 
-    # 4. FILE_READ
-    if any(w in lower for w in _READ_WORDS):
+    # 4. FILE_READ — requer verbo de leitura + referência a arquivo
+    if _READ_WORDS_RE.search(mensagem) and re.search(r'\w+\.\w{2,4}|arquivo|pasta', lower):
         return Intent(type="FILE_READ", raw=mensagem, args={"instruction": mensagem})
 
     # 5. DEBATE

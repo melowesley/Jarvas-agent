@@ -67,11 +67,18 @@ def main():
     parser.add_argument("--version", action="version", version="jarvas 0.4.0")
     parser.add_argument("--managed", action="store_true", help="Run the managed agent server")
     parser.add_argument("--port", type=int, default=8080, help="Porta do servidor managed (default: 8080)")
+    parser.add_argument("--in", dest="project_path", help="Abre Jarvas ancorado em um projeto")
     parsed = parser.parse_args()
 
     if parsed.managed:
         import uvicorn
         uvicorn.run("jarvas.api:app", host="0.0.0.0", port=parsed.port, reload=False)
+        return
+
+    if parsed.project_path:
+        _ctx.set_project(parsed.project_path)
+        console.print(f"[green]Projeto:[/green] {parsed.project_path}")
+        rodar_interativo()
         return
 
     if not parsed.args:

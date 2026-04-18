@@ -207,6 +207,43 @@ CREATE POLICY "allow_anon_insert_debate_logs"   ON public.debate_logs   FOR INSE
 
 ---
 
+## Sintaxe na Superfície (PowerShell / Terminal)
+
+A superfície do Jarvas oferece quatro modos de entrada diretos, sem entrar no REPL:
+
+```bash
+jarvas <pergunta>                           # Chat único, retorna resposta
+jarvas /help                                # Lista todos os slash commands
+jarvas --in C:\caminho\do\projeto          # Abre REPL ancorado no projeto
+jarvas continuar <data> <hora>              # Restaura contexto anterior
+```
+
+#### Notas importantes
+
+- **Mensagens com quebras de linha no PowerShell:** Se você colar uma mensagem com `\n`, o PowerShell quebra em múltiplas linhas e cada uma vira um comando separado (erro: "O termo 'de' não é reconhecido..."). **Solução:**
+  - Envolver em aspas: `jarvas "pergunta com várias linhas"` (PowerShell mantém como 1 argumento)
+  - Ou entrar no REPL (`jarvas` + Enter) e colar lá
+  - Ou usar `jarvas --in <projeto>` para ficar no REPL interativo
+
+- **Slash commands na superfície:** `jarvas /modelos`, `jarvas /debate sobre X`, etc. funcionam igual ao REPL — eles despacham para o mesmo despachante interno.
+
+#### No interior do REPL
+
+Uma vez dentro do REPL (após `jarvas` + Enter ou `jarvas --in <projeto>`), você tem diálogo contínuo:
+
+```bash
+você > sua pergunta aqui
+Jarvas (hermes) — resposta...
+
+você > /help
+[lista de comandos]
+
+você > /debate sobre Python vs JavaScript
+[debate multi-agente]
+```
+
+---
+
 ## Modos de Uso
 
 ### 1. Terminal Interativo (CLI)
@@ -215,6 +252,7 @@ CREATE POLICY "allow_anon_insert_debate_logs"   ON public.debate_logs   FOR INSE
 jarvas                            # Modo REPL contínuo
 jarvas "Como funciona X?"         # Pergunta direta
 jarvas continuar ontem 15h        # Restaurar sessão anterior
+jarvas --in C:\caminho\projeto    # REPL ancorado em um projeto
 ```
 
 ### 2. Interface Web e Servidor Gerenciado

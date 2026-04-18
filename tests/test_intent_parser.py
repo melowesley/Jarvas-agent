@@ -114,3 +114,53 @@ def test_priority_set_project_over_attach():
     # SET_PROJECT tem prioridade sobre ATTACH
     i = parse("trabalhar em #C:/projetos/dados.xlsx")
     assert i.type == "SET_PROJECT"
+
+
+# Regressão: falsos positivos de FILE_READ (issue com substring matching de "ver", "ler", etc)
+def test_chat_conversa_not_file_read():
+    # "conversa" contém "ver" como substring, mas não é FILE_READ
+    i = parse("qual modelo você utiliza? consegue manter essa conversa?")
+    assert i.type == "CHAT"
+
+
+def test_chat_universo_not_file_read():
+    # "universo" contém "ver" como substring
+    i = parse("fale sobre o universo")
+    assert i.type == "CHAT"
+
+
+def test_chat_servidor_not_file_read():
+    # "servidor" contém "ver" como substring
+    i = parse("use o servidor local para testar")
+    assert i.type == "CHAT"
+
+
+def test_chat_converter_not_file_read():
+    # "converter" contém "ver" como substring
+    i = parse("pode converter isso para JSON?")
+    assert i.type == "CHAT"
+
+
+def test_chat_voce_le_not_file_read():
+    # "você lê" contém "lê", mas sem menção a arquivo
+    i = parse("você lê bem? qual sua opinião?")
+    assert i.type == "CHAT"
+
+
+def test_chat_poder_not_file_read():
+    # "poder" contém "der" mas "ler" é substring — sem arquivo, é CHAT
+    i = parse("qual o poder dessa linguagem?")
+    assert i.type == "CHAT"
+
+
+def test_file_read_with_arquivo_keyword():
+    # Verdadeiro positivo: FILE_READ com "arquivo"
+    i = parse("mostre o arquivo de configuração")
+    assert i.type == "FILE_READ"
+
+
+def test_file_read_extension():
+    # Verdadeiro positivo: FILE_READ detectado pelo bloco 2 (extensão)
+    i = parse("leia o arquivo README.md")
+    assert i.type == "FILE_READ"
+    assert "README.md" in i.args.get("path", i.args.get("instruction", ""))
