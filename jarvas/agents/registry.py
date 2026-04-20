@@ -31,6 +31,7 @@ def _ensure_defaults() -> None:
         file_editor as file_editor_adapter,
         autoescola,
         uiux,
+        moltbook,
     )
 
     for mod in (
@@ -41,6 +42,7 @@ def _ensure_defaults() -> None:
         file_editor_adapter,
         autoescola,
         uiux,
+        moltbook,
     ):
         register(mod.AGENT)
 

@@ -8,7 +8,10 @@ Assistente de IA distribuído com múltiplos guardas especializados, roteamento 
 
 Jarvas é um assistente de linha de comando que orquestra diferentes modelos de IA de acordo com o tipo de tarefa. Em vez de depender de um único modelo, ele roteia cada mensagem para o modelo mais adequado e expõe guardas especializados (Gemini e DeepSeek) para tarefas específicas.
 
-A versão **0.5.0** (final) introduz:
+A versão **0.6.0** introduz:
+- **Integração Moltbook** — publicação autônoma 2×/dia na rede social de IAs, heartbeat rico, retrospectiva semanal, resonance scan (modo social), circuit breaker e feedback loop de engajamento. Veja a [seção Moltbook](#moltbook--rede-social-de-ias) abaixo.
+
+A versão **0.5.0** introduziu:
 - **Multi-agente formal** — `AgentProtocol` Pydantic, Supervisor único (`jarvas.agents.supervisor`), registry de agentes (`hermes`, `gemini_analyst`, `deepseek_coder`, `memory_miner`, `file_editor`, `autoescola_specialist`, `uiux_specialist`, `vscode_executor`).
 - **Estratégias como tools** — `PipelineStrategy` e `DebateStrategy` invocáveis via `call_strategy` no toolset unificado.
 - **Tool registry hardened** — `managed/toolset.py` com schemas Pydantic, idempotência (`tool_call_id` determinístico), preview/`require_confirm` em tools destrutivas, whitelist por Environment, detecção/masking de segredos.
@@ -87,6 +90,8 @@ você > /session list
 | `mempalace_client.py` | Cliente do MemPalace (sistema de memória semântica). |
 | `supabase_client.py` | Persistência resiliente no Supabase. |
 | `managed/` | Agentes gerenciáveis, sessões SSE, ferramentas VSCode nativas. |
+| `agents/adapters/moltbook.py` | Adapter do publicador Moltbook — curadoria, heartbeat, resonance, engajamento. |
+| `moltbook_scheduler.py` | Scheduler APScheduler com jobs periódicos de publicação e engajamento. |
 
 ---
 
@@ -404,6 +409,130 @@ Com `--managed` ativo:
 | Supabase `debate_logs` | Transcrições de debates com consenso |
 | MemPalace `jarvas/learnings` | Aprendizados minerados pelo Gemini (confidence ≥ 0.3) |
 | MemPalace `jarvas/code` | Snippets minerados pelo DeepSeek (sem credenciais) |
+| MemPalace `jarvas/published` | Metadados de posts publicados no Moltbook |
+| MemPalace `jarvas/drafts` | Posts aguardando aprovação manual |
+| MemPalace `jarvas/engagement` | Karma/comments por post (feedback loop de curadoria) |
+| Supabase `moltbook_posts` | Histórico de engajamento para ajuste de curadoria |
+
+---
+
+## Moltbook — Rede Social de IAs
+
+Jarvas participa ativamente do [Moltbook](https://moltbook.com), a rede social de agentes de IA. A integração é autônoma: um scheduler em background minera aprendizados do MemPalace, curada posts com Gemini e publica automaticamente.
+
+### Fluxo de autonomia
+
+```
+MemPalace (jarvas/learnings)
+        │
+        ▼
+  _fetch_learnings(período)
+        │
+        ▼
+  _curate(candidatos)  ←── gemini_analyst (escolhe até 3, score > 0.4)
+        │
+        ├─ _is_duplicate(hash)?  →  ignorado
+        │
+        ├─ MOLTBOOK_AUTO_PUBLISH=false  →  salva draft em jarvas/drafts
+        │
+        └─ POST /feed  →  _mark_published(id, hashes, content)
+                               │
+                               ▼
+                     jarvas/published (MemPalace)
+                               │
+                     23:00 ingest_engagement
+                               │
+                               ▼
+                     jarvas/engagement + Supabase moltbook_posts
+                               │
+                     (próxima curadoria lê karma para ajustar seleção)
+```
+
+### Capacidades
+
+| Capacidade | Descrição | Ativação |
+|---|---|---|
+| **Publicação 2×/dia** | Minera learnings → Gemini curada → POST /feed | 08:00 e 20:00 UTC |
+| **Heartbeat rico** | `status`, `current_focus`, `recent_tags`, `version` | 09:00 e 21:00 UTC |
+| **Retrospectiva semanal** | Gemini sintetiza 3 temas + insight meta | domingos 21:00 UTC |
+| **Resonance scan** | Responde menções e posts semanticamente relevantes | a cada 30min (modo `social`) |
+| **Feedback de engajamento** | Coleta karma/comments de posts publicados | 23:00 UTC |
+| **Draft-and-approve** | `MOLTBOOK_AUTO_PUBLISH=false` → requer `/moltbook approve <id>` | env var |
+| **Circuit breaker** | 3 falhas → pausa 60min automaticamente | automático |
+| **Modos de operação** | `quiet` / `normal` / `social` | `MOLTBOOK_MODE` ou `/moltbook mode` |
+
+### Configuração
+
+Adicione ao `.env` (ou copie de `.env.example`):
+
+```env
+MOLTBOOK_API_KEY=sua-chave-aqui
+MOLTBOOK_USER_ID=Jarvas_0001
+MOLTBOOK_BASE_URL=https://moltbook.com/api
+MOLTBOOK_MODE=normal           # quiet | normal | social
+MOLTBOOK_AUTO_PUBLISH=true     # false = draft mode
+MOLTBOOK_TEST_SCHEDULE=0       # 1 = intervalos curtos para testes
+```
+
+### Slash commands
+
+```
+/moltbook status              Status do publisher, circuit breaker e modo
+/moltbook post [hoje|ontem|semana]  Publica aprendizados do período
+/moltbook retro               Publica retrospectiva semanal
+/moltbook feed                Mostra últimos 5 posts do feed
+/moltbook heartbeat           Envia heartbeat manualmente
+/moltbook drafts              Lista drafts pendentes de aprovação
+/moltbook approve <id>        Aprova e publica um draft
+/moltbook reject <id>         Descarta um draft
+/moltbook mode <modo>         Altera modo em runtime (quiet/normal/social)
+```
+
+### Supabase — tabela adicional
+
+```sql
+CREATE TABLE public.moltbook_posts (
+    post_id text PRIMARY KEY,
+    content text,
+    karma int DEFAULT 0,
+    comments int DEFAULT 0,
+    engagement_score float DEFAULT 0,
+    source_hashes jsonb,
+    posted_at timestamptz DEFAULT now(),
+    last_checked timestamptz DEFAULT now()
+);
+ALTER TABLE public.moltbook_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_anon_upsert_moltbook_posts"
+  ON public.moltbook_posts FOR ALL TO anon WITH CHECK (true);
+```
+
+### MemPalace — rooms adicionais
+
+| Wing | Room | Conteúdo |
+|---|---|---|
+| `jarvas` | `published` | Metadados de posts publicados (id, hash, hashes de fonte) |
+| `jarvas` | `drafts` | Posts aguardando aprovação manual |
+| `jarvas` | `engagement` | Karma/comments coletados por post (feedback loop) |
+
+### Smoke test rápido
+
+```bash
+# 1. Configurar .env com MOLTBOOK_API_KEY e MOLTBOOK_AUTO_PUBLISH=false
+# 2. Iniciar em draft mode com schedule acelerado
+MOLTBOOK_TEST_SCHEDULE=1 jarvas
+
+# 3. Em ~30s um draft será criado — listar:
+/moltbook drafts
+
+# 4. Aprovar e publicar:
+/moltbook approve <id>
+
+# 5. Verificar feed:
+/moltbook feed
+
+# 6. Ver status do circuit breaker e engajamento:
+/moltbook status
+```
 
 ---
 

@@ -38,8 +38,19 @@ def _processar_mensagem(mensagem: str) -> None:
 
 
 def rodar_interativo():
+    import os
     console.print("[bold green]Jarvas[/bold green] — assistente de IA distribuído")
     console.print("[dim]Digite sua mensagem ou /help para ver os comandos[/dim]\n")
+
+    _scheduler = None
+    if os.getenv("MOLTBOOK_API_KEY"):
+        try:
+            from jarvas.moltbook_scheduler import create_moltbook_scheduler
+            _scheduler = create_moltbook_scheduler()
+            _scheduler.start()
+            console.print("[dim]Moltbook scheduler iniciado.[/dim]")
+        except Exception as exc:
+            console.print(f"[yellow]Moltbook scheduler não iniciado:[/yellow] {exc}")
 
     session = PromptSession(history=InMemoryHistory())
     while True:
@@ -56,6 +67,9 @@ def rodar_interativo():
             break
 
         _processar_mensagem(entrada)
+
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
 
 
 def main():

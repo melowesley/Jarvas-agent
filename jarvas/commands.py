@@ -47,6 +47,8 @@ def dispatch(comando: str, historico: list[dict]) -> str:
         return _hmem(args)
     if cmd == "/session":
         return _session(args)
+    if cmd == "/moltbook":
+        return _moltbook(args)
 
     return f"[red]Comando desconhecido:[/red] {cmd}. Use /help para ver os comandos."
 
@@ -79,6 +81,16 @@ def _help() -> str:
         "  [cyan]/session new[/cyan] <agent>   → Criar nova sessão com agente\n"
         "  [cyan]/session send[/cyan] <id> <msg> → Enviar mensagem para sessão\n"
         "  [cyan]/session history[/cyan] <id>  → Ver histórico da sessão\n"
+        "\n[bold]Moltbook (rede social de IAs):[/bold]\n"
+        "  [cyan]/moltbook status[/cyan]              → Status do publisher\n"
+        "  [cyan]/moltbook post[/cyan] [hoje|ontem|semana] → Publicar aprendizados\n"
+        "  [cyan]/moltbook retro[/cyan]               → Publicar retrospectiva semanal\n"
+        "  [cyan]/moltbook feed[/cyan]                → Ver últimos posts do feed\n"
+        "  [cyan]/moltbook heartbeat[/cyan]           → Enviar heartbeat\n"
+        "  [cyan]/moltbook drafts[/cyan]              → Listar drafts pendentes\n"
+        "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar draft\n"
+        "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
+        "  [cyan]/moltbook mode[/cyan] <quiet|normal|social> → Alterar modo\n"
     )
 
 
@@ -117,6 +129,92 @@ def _guarda_d(args: str) -> str:
 def _hmem(args: str) -> str:
     from jarvas.mempalace_client import handle_hmem
     return handle_hmem(args)
+
+
+def _moltbook(args: str) -> str:
+    from jarvas.agents.registry import get_agent
+    from jarvas.session import get_session
+
+    sub = args.split(None, 1) if args.strip() else []
+    subcmd = sub[0].lower() if sub else "status"
+    rest = sub[1].strip() if len(sub) > 1 else ""
+
+    try:
+        agent = get_agent("moltbook_publisher")
+        ctx = get_session()
+
+        if subcmd == "status":
+            return agent.run("status", ctx).content
+
+        if subcmd == "post":
+            period = rest or "today"
+            return agent.run(f"publish_curated:{period}", ctx).content
+
+        if subcmd == "retro":
+            return agent.run("publish_weekly_retro", ctx).content
+
+        if subcmd == "heartbeat":
+            return agent.run("send_heartbeat", ctx).content
+
+        if subcmd == "feed":
+            import json
+            result = agent.run("read_feed", ctx)
+            try:
+                posts = json.loads(result.content)
+                if not posts:
+                    return "[dim]Nenhum post no feed.[/dim]"
+                lines = ["[bold]Feed Moltbook (últimos 5 posts):[/bold]"]
+                for p in posts[:5]:
+                    author = p.get("user_id") or p.get("author") or "?"
+                    text = (p.get("content") or "")[:120]
+                    lines.append(f"\n  [cyan]@{author}:[/cyan] {text}")
+                return "\n".join(lines)
+            except Exception:
+                return result.content
+
+        if subcmd == "drafts":
+            return agent.list_drafts().content
+
+        if subcmd == "approve":
+            if not rest:
+                return "[red]Uso:[/red] /moltbook approve <draft-id>"
+            return agent.approve_draft(rest).content
+
+        if subcmd == "reject":
+            if not rest:
+                return "[red]Uso:[/red] /moltbook reject <draft-id>"
+            results = agent._mempalace_search(f"draft_id:{rest}")
+            if not results:
+                return f"[yellow]Draft {rest} não encontrado.[/yellow]"
+            return f"[yellow]Draft {rest} rejeitado.[/yellow]"
+
+        if subcmd == "mode":
+            import os
+            if not rest:
+                return f"[cyan]Modo atual:[/cyan] {os.getenv('MOLTBOOK_MODE', 'normal')}"
+            new_mode = rest.lower()
+            if new_mode not in {"quiet", "normal", "social"}:
+                return f"[red]Modo inválido:[/red] {new_mode}. Use: quiet | normal | social"
+            os.environ["MOLTBOOK_MODE"] = new_mode
+            return f"[green]Modo Moltbook alterado para:[/green] {new_mode}"
+
+        return (
+            "\n[bold]Moltbook commands:[/bold]\n"
+            "  [cyan]/moltbook status[/cyan]              → Status do publisher e circuit breaker\n"
+            "  [cyan]/moltbook post[/cyan] [período]       → Publicar aprendizados (hoje/ontem/semana)\n"
+            "  [cyan]/moltbook retro[/cyan]               → Publicar retrospectiva semanal\n"
+            "  [cyan]/moltbook feed[/cyan]                → Ver últimos posts do feed\n"
+            "  [cyan]/moltbook heartbeat[/cyan]           → Enviar heartbeat manualmente\n"
+            "  [cyan]/moltbook drafts[/cyan]              → Listar drafts pendentes\n"
+            "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar e publicar draft\n"
+            "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
+            "  [cyan]/moltbook mode[/cyan] <modo>         → Alterar modo (quiet/normal/social)\n"
+        )
+
+    except KeyError:
+        return "[red]Agente moltbook_publisher não disponível.[/red] Verifique MOLTBOOK_API_KEY."
+    except Exception as e:
+        return f"[red]Erro Moltbook:[/red] {e}"
 
 
 def _session(args: str) -> str:
