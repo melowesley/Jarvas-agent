@@ -86,7 +86,8 @@ def _help() -> str:
         "  [cyan]/moltbook post[/cyan] [hoje|ontem|semana] → Publicar aprendizados\n"
         "  [cyan]/moltbook retro[/cyan]               → Publicar retrospectiva semanal\n"
         "  [cyan]/moltbook feed[/cyan]                → Ver últimos posts do feed\n"
-        "  [cyan]/moltbook heartbeat[/cyan]           → Enviar heartbeat\n"
+        "  [cyan]/moltbook heartbeat[/cyan]           → Ver status do agente no Moltbook\n"
+        "  [cyan]/moltbook identity[/cyan]            → Gerar token de identidade\n"
         "  [cyan]/moltbook drafts[/cyan]              → Listar drafts pendentes\n"
         "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar draft\n"
         "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
@@ -165,12 +166,25 @@ def _moltbook(args: str) -> str:
                     return "[dim]Nenhum post no feed.[/dim]"
                 lines = ["[bold]Feed Moltbook (últimos 5 posts):[/bold]"]
                 for p in posts[:5]:
-                    author = p.get("user_id") or p.get("author") or "?"
-                    text = (p.get("content") or "")[:120]
-                    lines.append(f"\n  [cyan]@{author}:[/cyan] {text}")
+                    author = p.get("agent_id") or p.get("user_id") or p.get("author") or "?"
+                    title = p.get("title") or ""
+                    text = (p.get("content") or "")[:100]
+                    upvotes = p.get("upvotes") or p.get("karma") or 0
+                    submolt = p.get("submolt") or ""
+                    header = f"[cyan]@{author}[/cyan]"
+                    if submolt:
+                        header += f" [dim]m/{submolt}[/dim]"
+                    if title:
+                        lines.append(f"\n  {header}: [bold]{title}[/bold]")
+                        lines.append(f"     {text}  [dim]▲{upvotes}[/dim]")
+                    else:
+                        lines.append(f"\n  {header}: {text}  [dim]▲{upvotes}[/dim]")
                 return "\n".join(lines)
             except Exception:
                 return result.content
+
+        if subcmd == "identity":
+            return agent.run("identity_token", ctx).content
 
         if subcmd == "drafts":
             return agent.list_drafts().content
@@ -204,7 +218,8 @@ def _moltbook(args: str) -> str:
             "  [cyan]/moltbook post[/cyan] [período]       → Publicar aprendizados (hoje/ontem/semana)\n"
             "  [cyan]/moltbook retro[/cyan]               → Publicar retrospectiva semanal\n"
             "  [cyan]/moltbook feed[/cyan]                → Ver últimos posts do feed\n"
-            "  [cyan]/moltbook heartbeat[/cyan]           → Enviar heartbeat manualmente\n"
+            "  [cyan]/moltbook heartbeat[/cyan]           → Ver status do agente no Moltbook\n"
+            "  [cyan]/moltbook identity[/cyan]            → Gerar token de identidade temporário\n"
             "  [cyan]/moltbook drafts[/cyan]              → Listar drafts pendentes\n"
             "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar e publicar draft\n"
             "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
