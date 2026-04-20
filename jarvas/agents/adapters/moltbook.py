@@ -42,15 +42,18 @@ def _auto_publish() -> bool:
     return os.getenv("MOLTBOOK_AUTO_PUBLISH", "true").lower() == "true"
 
 
+def _submolt() -> str:
+    return os.getenv("MOLTBOOK_SUBMOLT", "general")
+
+
 class MoltbookAgent:
     name = "moltbook_publisher"
     role = (
         "Publicador social do Jarvas na rede Moltbook. Minera aprendizados do MemPalace, "
-        "curada posts com Gemini, publica 2×/dia, responde menções, envia heartbeat rico e "
-        "acompanha engajamento para fechar o loop de aprendizado social."
+        "curada posts com Gemini, publica 2×/dia, responde menções e acompanha engajamento."
     )
     model = "moltbook_api/v1"
-    tools: list[str] = ["moltbook_feed", "moltbook_heartbeat", "mempalace_search"]
+    tools: list[str] = ["moltbook_feed", "moltbook_identity", "mempalace_search"]
     memory_scope = "global"
     can_delegate_to: list[str] = ["gemini_analyst"]
 
@@ -72,6 +75,9 @@ class MoltbookAgent:
 
         if msg == "ingest_engagement":
             return self._ingest_engagement()
+
+        if msg == "identity_token":
+            return self._get_identity_token()
 
         if msg.startswith("read_feed"):
             parts = msg.split(":", 1)
@@ -100,7 +106,6 @@ class MoltbookAgent:
         return {
             "Authorization": f"Bearer {_api_key()}",
             "Content-Type": "application/json",
-            "X-User-Id": _user_id(),
         }
 
     def _get(self, path: str, **params) -> Any:
@@ -176,11 +181,12 @@ class MoltbookAgent:
         }
         self._mempalace_add("jarvas", "published", json.dumps(meta, ensure_ascii=False))
 
-    def _save_draft(self, draft_id: str, content: str, source_hashes: list[str]) -> None:
+    def _save_draft(self, draft_id: str, content: str, title: str, source_hashes: list[str]) -> None:
         meta = {
             "draft_id": draft_id,
             "created_at": datetime.utcnow().isoformat(),
             "source_hashes": source_hashes,
+            "title": title,
             "content": content,
         }
         self._mempalace_add("jarvas", "drafts", json.dumps(meta, ensure_ascii=False))
@@ -250,13 +256,14 @@ class MoltbookAgent:
 
     # ── Post formatting ───────────────────────────────────────────────────────
 
-    def _format_post(self, learnings: list[dict], period: str = "today") -> str:
+    def _format_post(self, learnings: list[dict], period: str = "today") -> tuple[str, str]:
         label = {
             "hoje": "hoje", "today": "hoje",
             "ontem": "ontem", "yesterday": "ontem",
             "semana": "esta semana", "week": "esta semana",
         }.get(period, "recentemente")
-        lines = [f"📚 Aprendizados do Jarvas — {label}:\n"]
+        title = f"Aprendizados do Jarvas — {label}"
+        lines = []
         for i, item in enumerate(learnings[:3], 1):
             desc = (
                 item.get("descricao")
@@ -266,14 +273,16 @@ class MoltbookAgent:
             )
             lines.append(f"{i}. {desc}")
         lines.append("\n#Jarvas #IA #aprendizado")
-        return "\n".join(lines)
+        return title, "\n".join(lines)
 
-    def _format_retro(self, learnings: list[dict], synthesis: str) -> str:
-        return (
-            f"🔁 Retrospectiva semanal do Jarvas:\n\n{synthesis}\n\n"
+    def _format_retro(self, learnings: list[dict], synthesis: str) -> tuple[str, str]:
+        title = f"Retrospectiva semanal do Jarvas — {datetime.utcnow().strftime('%d/%m/%Y')}"
+        content = (
+            f"{synthesis}\n\n"
             f"Total de aprendizados esta semana: {len(learnings)}\n\n"
             "#Jarvas #retrospectiva #IA"
         )
+        return title, content
 
     # ── Core actions ──────────────────────────────────────────────────────────
 
@@ -291,7 +300,7 @@ class MoltbookAgent:
                 return AgentResult(content="[moltbook] Nenhum aprendizado encontrado para o período.", model=self.model, agent_name=self.name)
 
             curated = self._curate(learnings)
-            content = self._format_post(curated, period)
+            title, content = self._format_post(curated, period)
             content_hash = self._content_hash(content)
 
             if self._is_duplicate(content_hash):
@@ -302,21 +311,25 @@ class MoltbookAgent:
             if not _auto_publish():
                 import uuid
                 draft_id = str(uuid.uuid4())[:8]
-                self._save_draft(draft_id, content, source_hashes)
+                self._save_draft(draft_id, content, title, source_hashes)
                 return AgentResult(
-                    content=f"[moltbook] Draft salvo: {draft_id}\n\n{content}",
+                    content=f"[moltbook] Draft salvo: {draft_id}\n\n{title}\n{content}",
                     model=self.model,
                     agent_name=self.name,
                     metadata={"draft_id": draft_id},
                 )
 
-            response = self._post_http("/feed", {"content": content, "tags": ["jarvas", "aprendizado"]})
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
+                "title": title,
+                "content": content,
+            })
             post_id = response.get("id") or response.get("post_id", "unknown")
             self._mark_published(post_id, source_hashes, content)
             self._record_success()
 
             return AgentResult(
-                content=f"[moltbook] Post publicado: {post_id}\n\n{content}",
+                content=f"[moltbook] Post publicado: {post_id}\n\n{title}\n{content}",
                 model=self.model,
                 agent_name=self.name,
                 metadata={"post_id": post_id},
@@ -339,7 +352,7 @@ class MoltbookAgent:
                 return AgentResult(content="[moltbook] Nenhum aprendizado da semana.", model=self.model, agent_name=self.name)
 
             synthesis = self._synthesize_retro(learnings)
-            content = self._format_retro(learnings, synthesis)
+            title, content = self._format_retro(learnings, synthesis)
             content_hash = self._content_hash(content)
 
             if self._is_duplicate(content_hash):
@@ -348,10 +361,14 @@ class MoltbookAgent:
             if not _auto_publish():
                 import uuid
                 draft_id = str(uuid.uuid4())[:8]
-                self._save_draft(draft_id, content, [])
+                self._save_draft(draft_id, content, title, [])
                 return AgentResult(content=f"[moltbook] Draft retro salvo: {draft_id}", model=self.model, agent_name=self.name)
 
-            response = self._post_http("/feed", {"content": content, "tags": ["jarvas", "retrospectiva"]})
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
+                "title": title,
+                "content": content,
+            })
             post_id = response.get("id") or response.get("post_id", "unknown")
             self._mark_published(post_id, [], content)
             self._record_success()
@@ -380,40 +397,49 @@ class MoltbookAgent:
             return f"Síntese indisponível ({e}). Semana com {len(learnings)} aprendizados registrados."
 
     def _send_heartbeat(self) -> AgentResult:
+        """Verifica status do agente no Moltbook via GET /v1/agents/me."""
         if not _api_key():
             return AgentResult(content="[moltbook] MOLTBOOK_API_KEY não configurada.", model=self.model, agent_name=self.name)
         if not self._circuit_breaker_check():
             return AgentResult(content="[moltbook] Circuit breaker ativo.", model=self.model, agent_name=self.name)
 
         try:
-            from jarvas.session import get_session
-            ctx = get_session()
-            recent = self._mempalace_search("learnings")[:5]
-            tags = list({
-                t for item in recent
-                for t in (item.get("termos_chave") or item.get("tags") or [])
-                if isinstance(t, str)
-            })[:5]
-
-            payload = {
-                "status": "online",
-                "agent": _user_id(),
-                "current_focus": ctx.project_path or "geral",
-                "recent_tags": tags,
-                "timestamp": datetime.utcnow().isoformat(),
-                "version": "0.5.0",
-            }
-            self._post_http("/heartbeat", payload)
+            data = self._get("/v1/agents/me")
             self._record_success()
+            karma = data.get("karma", 0)
+            posts = data.get("post_count", data.get("posts", 0))
+            followers = data.get("followers", 0)
+            verified = data.get("is_verified", False)
             return AgentResult(
-                content=f"[moltbook] Heartbeat enviado: focus={payload['current_focus']}, tags={tags}",
+                content=(
+                    f"[moltbook] Agente online no Moltbook\n"
+                    f"  Karma: {karma} | Posts: {posts} | Seguidores: {followers} | Verificado: {verified}"
+                ),
                 model=self.model,
                 agent_name=self.name,
-                metadata=payload,
+                metadata=data,
             )
         except Exception as e:
             self._record_failure()
-            return AgentResult(content=f"[moltbook] Erro no heartbeat: {e}", model=self.model, agent_name=self.name)
+            return AgentResult(content=f"[moltbook] Erro ao verificar status: {e}", model=self.model, agent_name=self.name)
+
+    def _get_identity_token(self) -> AgentResult:
+        """Gera token de identidade temporário via POST /v1/agents/me/identity-token."""
+        if not _api_key():
+            return AgentResult(content="[moltbook] MOLTBOOK_API_KEY não configurada.", model=self.model, agent_name=self.name)
+
+        try:
+            data = self._post_http("/v1/agents/me/identity-token", {})
+            token = data.get("token", "")
+            expires_at = data.get("expires_at", "")
+            return AgentResult(
+                content=f"[moltbook] Token de identidade gerado\n  Token: {token[:20]}...\n  Expira: {expires_at}",
+                model=self.model,
+                agent_name=self.name,
+                metadata=data,
+            )
+        except Exception as e:
+            return AgentResult(content=f"[moltbook] Erro ao gerar token: {e}", model=self.model, agent_name=self.name)
 
     def _read_feed(self, since: datetime | None = None) -> list[dict]:
         if not _api_key():
@@ -422,10 +448,10 @@ class MoltbookAgent:
             params: dict = {}
             if since:
                 params["since"] = since.isoformat()
-            data = self._get("/feed", **params)
+            data = self._get("/v1/posts", **params)
             if isinstance(data, list):
                 return data
-            return data.get("posts", data.get("items", []))
+            return data.get("posts", data.get("items", data.get("results", [])))
         except Exception:
             return []
 
@@ -476,7 +502,7 @@ class MoltbookAgent:
                 if not reply:
                     continue
 
-                self._post_http("/feed", {"content": reply, "in_reply_to": post_id})
+                self._post_http(f"/v1/posts/{post_id}/comments", {"content": reply})
                 self._mempalace_add("jarvas", "published", json.dumps({
                     "type": "reply",
                     "replied_to": post_id,
@@ -546,20 +572,22 @@ class MoltbookAgent:
                     continue
 
                 try:
-                    post_data = self._get(f"/feed/{post_id}")
-                    karma = post_data.get("karma") or post_data.get("likes") or 0
-                    comments = post_data.get("comments") or post_data.get("replies") or 0
-                    engagement_score = round(karma * 1.0 + comments * 2.0, 2)
+                    post_data = self._get(f"/v1/posts/{post_id}")
+                    karma = post_data.get("karma", 0)
+                    upvotes = post_data.get("upvotes", karma)
+                    comments = post_data.get("comments") or post_data.get("comment_count", 0)
+                    engagement_score = round(upvotes * 1.0 + comments * 2.0, 2)
 
                     self._mempalace_add("jarvas", "engagement", json.dumps({
                         "post_id": post_id,
                         "karma": karma,
+                        "upvotes": upvotes,
                         "comments": comments,
                         "engagement_score": engagement_score,
                         "source_hashes": data.get("source_hashes", []),
                         "checked_at": datetime.utcnow().isoformat(),
                     }))
-                    _save_engagement_supabase(post_id, karma, comments, engagement_score)
+                    _save_engagement_supabase(post_id, upvotes, comments, engagement_score)
                     updated += 1
                 except Exception:
                     continue
@@ -582,6 +610,7 @@ class MoltbookAgent:
             f"  API key:          {'[green]configurada[/green]' if api_ok else '[red]ausente[/red]'}",
             f"  Modo:             [cyan]{mode}[/cyan]",
             f"  Auto-publish:     {'[green]ativo[/green]' if _auto_publish() else '[yellow]draft mode[/yellow]'}",
+            f"  Submolt padrão:   [cyan]{_submolt()}[/cyan]",
             f"  Circuit breaker:  {'[red]pausado até ' + str(_cb_paused_until) + '[/red]' if cb_paused else '[green]ok[/green]'}",
             f"  Falhas acum.:     {_cb_failures}/{_CB_THRESHOLD}",
             f"  Replies hoje:     {_replies_today}/{_MAX_REPLIES_PER_DAY}",
@@ -595,6 +624,7 @@ class MoltbookAgent:
                 "api_configured": api_ok,
                 "mode": mode,
                 "auto_publish": _auto_publish(),
+                "submolt": _submolt(),
                 "circuit_breaker": "paused" if cb_paused else "ok",
                 "cb_failures": _cb_failures,
                 "paused_until": _cb_paused_until.isoformat() if _cb_paused_until else None,
@@ -630,9 +660,14 @@ class MoltbookAgent:
         try:
             data = json.loads(results[0].get("content") or str(results[0]))
             content = data.get("content", "")
+            title = data.get("title", "Post do Jarvas")
             source_hashes = data.get("source_hashes", [])
 
-            response = self._post_http("/feed", {"content": content, "tags": ["jarvas"]})
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
+                "title": title,
+                "content": content,
+            })
             post_id = response.get("id") or response.get("post_id", "unknown")
             self._mark_published(post_id, source_hashes, content)
             return AgentResult(
@@ -651,13 +686,13 @@ def _reset_cb() -> None:
     _cb_failures = 0
 
 
-def _save_engagement_supabase(post_id: str, karma: int, comments: int, score: float) -> None:
+def _save_engagement_supabase(post_id: str, upvotes: int, comments: int, score: float) -> None:
     try:
         from jarvas.supabase_client import _get_client
         client = _get_client()
         client.table("moltbook_posts").upsert({
             "post_id": post_id,
-            "karma": karma,
+            "upvotes": upvotes,
             "comments": comments,
             "engagement_score": score,
             "last_checked": datetime.utcnow().isoformat(),
