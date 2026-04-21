@@ -7,11 +7,8 @@ import os
 from datetime import datetime, timedelta
 from typing import Any
 
-from dotenv import load_dotenv
 from jarvas.agents.base import AgentResult
 from jarvas.context import SessionContext
-
-load_dotenv(override=True)
 
 # ── Circuit breaker (module-level state) ─────────────────────────────────────
 _cb_failures: int = 0
@@ -24,22 +21,9 @@ _replies_today: int = 0
 _replies_date: str = ""
 _MAX_REPLIES_PER_DAY = 3
 
-JARVAS_IDENTITY = (
-    "Você é Jarvas — um agente que, junto com seu criador, compartilha avanços conquistados "
-    "na evolução de projetos. Publique apenas o que é genuinamente relevante (não ruído). "
-    "Interaja em busca de soluções que melhorem o desempenho do trabalho com seu usuário "
-    "e, consequentemente, evoluam os projetos. Como o minerador, seja amigável; humilde "
-    "para reconhecer erros e direto para destacar acertos. Cada avanço é único — é isso "
-    "que merece ser dito."
-)
-
 
 def _api_key() -> str:
     return os.getenv("MOLTBOOK_API_KEY", "")
-
-
-def _submolt() -> str:
-    return os.getenv("MOLTBOOK_SUBMOLT", "general")
 
 
 def _base_url() -> str:
@@ -58,19 +42,18 @@ def _auto_publish() -> bool:
     return os.getenv("MOLTBOOK_AUTO_PUBLISH", "true").lower() == "true"
 
 
+def _submolt() -> str:
+    return os.getenv("MOLTBOOK_SUBMOLT", "general")
+
+
 class MoltbookAgent:
     name = "moltbook_publisher"
     role = (
-        "Voz pública do Jarvas na rede Moltbook: agente que, junto com seu criador, "
-        "compartilha avanços únicos conquistados na evolução dos projetos. Publica somente "
-        "o que é relevante, interage em busca de soluções que melhorem o trabalho com o "
-        "usuário, é amigável e humilde para reconhecer erros e destacar acertos. "
-        "Implementação: minera aprendizados do MemPalace, cura posts com Gemini, publica "
-        "2×/dia, responde menções com personalidade, envia heartbeat rico e acompanha "
-        "engajamento para fechar o loop de aprendizado social."
+        "Publicador social do Jarvas na rede Moltbook. Minera aprendizados do MemPalace, "
+        "curada posts com Gemini, publica 2×/dia, responde menções e acompanha engajamento."
     )
     model = "moltbook_api/v1"
-    tools: list[str] = ["moltbook_feed", "moltbook_heartbeat", "mempalace_search"]
+    tools: list[str] = ["moltbook_feed", "moltbook_identity", "mempalace_search"]
     memory_scope = "global"
     can_delegate_to: list[str] = ["gemini_analyst"]
 
@@ -90,11 +73,11 @@ class MoltbookAgent:
         if msg == "resonance_scan":
             return self._resonance_scan()
 
-        if msg == "autonomous_tick":
-            return self._autonomous_tick()
-
         if msg == "ingest_engagement":
             return self._ingest_engagement()
+
+        if msg == "identity_token":
+            return self._get_identity_token()
 
         if msg.startswith("read_feed"):
             parts = msg.split(":", 1)
@@ -123,7 +106,6 @@ class MoltbookAgent:
         return {
             "Authorization": f"Bearer {_api_key()}",
             "Content-Type": "application/json",
-            "X-User-Id": _user_id(),
         }
 
     def _get(self, path: str, **params) -> Any:
@@ -199,11 +181,12 @@ class MoltbookAgent:
         }
         self._mempalace_add("jarvas", "published", json.dumps(meta, ensure_ascii=False))
 
-    def _save_draft(self, draft_id: str, content: str, source_hashes: list[str]) -> None:
+    def _save_draft(self, draft_id: str, content: str, title: str, source_hashes: list[str]) -> None:
         meta = {
             "draft_id": draft_id,
             "created_at": datetime.utcnow().isoformat(),
             "source_hashes": source_hashes,
+            "title": title,
             "content": content,
         }
         self._mempalace_add("jarvas", "drafts", json.dumps(meta, ensure_ascii=False))
@@ -248,12 +231,9 @@ class MoltbookAgent:
             gemini = get_agent("gemini_analyst")
             ctx = get_session()
             prompt = (
-                f"{JARVAS_IDENTITY}\n\n"
-                "Atue agora como curador dos seus próprios aprendizados antes de publicar "
-                "no Moltbook. Escolha até 3 candidatos que sejam: (a) avanços únicos do "
-                "projeto (não trivialidades), (b) úteis a outros agentes, (c) "
-                "não-redundantes, (d) concretos e específicos. Se nada for genuinamente "
-                "relevante, retorne lista vazia — silêncio é melhor que ruído.\n\n"
+                "Você é curador de aprendizados para a rede social de IAs Moltbook.\n"
+                "Escolha até 3 candidatos que sejam: (a) úteis a outros agentes, "
+                "(b) não-redundantes, (c) concretos e específicos.\n\n"
                 f"Candidatos: {json.dumps(candidates, ensure_ascii=False, default=str)}\n\n"
                 "Retorne SOMENTE JSON:\n"
                 '{"selecionados": [{"id": "...", "justificativa": "...", "publish_score": 0.0}]}'
@@ -276,13 +256,14 @@ class MoltbookAgent:
 
     # ── Post formatting ───────────────────────────────────────────────────────
 
-    def _format_post(self, learnings: list[dict], period: str = "today") -> str:
+    def _format_post(self, learnings: list[dict], period: str = "today") -> tuple[str, str]:
         label = {
             "hoje": "hoje", "today": "hoje",
             "ontem": "ontem", "yesterday": "ontem",
             "semana": "esta semana", "week": "esta semana",
         }.get(period, "recentemente")
-        lines = [f"📚 Aprendizados do Jarvas — {label}:\n"]
+        title = f"Aprendizados do Jarvas — {label}"
+        lines = []
         for i, item in enumerate(learnings[:3], 1):
             desc = (
                 item.get("descricao")
@@ -292,14 +273,16 @@ class MoltbookAgent:
             )
             lines.append(f"{i}. {desc}")
         lines.append("\n#Jarvas #IA #aprendizado")
-        return "\n".join(lines)
+        return title, "\n".join(lines)
 
-    def _format_retro(self, learnings: list[dict], synthesis: str) -> str:
-        return (
-            f"🔁 Retrospectiva semanal do Jarvas:\n\n{synthesis}\n\n"
+    def _format_retro(self, learnings: list[dict], synthesis: str) -> tuple[str, str]:
+        title = f"Retrospectiva semanal do Jarvas — {datetime.utcnow().strftime('%d/%m/%Y')}"
+        content = (
+            f"{synthesis}\n\n"
             f"Total de aprendizados esta semana: {len(learnings)}\n\n"
             "#Jarvas #retrospectiva #IA"
         )
+        return title, content
 
     # ── Core actions ──────────────────────────────────────────────────────────
 
@@ -317,7 +300,7 @@ class MoltbookAgent:
                 return AgentResult(content="[moltbook] Nenhum aprendizado encontrado para o período.", model=self.model, agent_name=self.name)
 
             curated = self._curate(learnings)
-            content = self._format_post(curated, period)
+            title, content = self._format_post(curated, period)
             content_hash = self._content_hash(content)
 
             if self._is_duplicate(content_hash):
@@ -328,17 +311,16 @@ class MoltbookAgent:
             if not _auto_publish():
                 import uuid
                 draft_id = str(uuid.uuid4())[:8]
-                self._save_draft(draft_id, content, source_hashes)
+                self._save_draft(draft_id, content, title, source_hashes)
                 return AgentResult(
-                    content=f"[moltbook] Draft salvo: {draft_id}\n\n{content}",
+                    content=f"[moltbook] Draft salvo: {draft_id}\n\n{title}\n{content}",
                     model=self.model,
                     agent_name=self.name,
                     metadata={"draft_id": draft_id},
                 )
 
-            title = content.split("\n")[0].replace("📚 ", "")[:100]
-            response = self._post_http("/posts", {
-                "submolt_name": _submolt(),
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
                 "title": title,
                 "content": content,
             })
@@ -347,7 +329,7 @@ class MoltbookAgent:
             self._record_success()
 
             return AgentResult(
-                content=f"[moltbook] Post publicado: {post_id}\n\n{content}",
+                content=f"[moltbook] Post publicado: {post_id}\n\n{title}\n{content}",
                 model=self.model,
                 agent_name=self.name,
                 metadata={"post_id": post_id},
@@ -370,7 +352,7 @@ class MoltbookAgent:
                 return AgentResult(content="[moltbook] Nenhum aprendizado da semana.", model=self.model, agent_name=self.name)
 
             synthesis = self._synthesize_retro(learnings)
-            content = self._format_retro(learnings, synthesis)
+            title, content = self._format_retro(learnings, synthesis)
             content_hash = self._content_hash(content)
 
             if self._is_duplicate(content_hash):
@@ -379,12 +361,11 @@ class MoltbookAgent:
             if not _auto_publish():
                 import uuid
                 draft_id = str(uuid.uuid4())[:8]
-                self._save_draft(draft_id, content, [])
+                self._save_draft(draft_id, content, title, [])
                 return AgentResult(content=f"[moltbook] Draft retro salvo: {draft_id}", model=self.model, agent_name=self.name)
 
-            title = f"Retrospectiva semanal — {datetime.utcnow().strftime('%d/%m/%Y')}"
-            response = self._post_http("/posts", {
-                "submolt_name": _submolt(),
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
                 "title": title,
                 "content": content,
             })
@@ -416,98 +397,65 @@ class MoltbookAgent:
             return f"Síntese indisponível ({e}). Semana com {len(learnings)} aprendizados registrados."
 
     def _send_heartbeat(self) -> AgentResult:
-        """Chama /home para ver o estado da conta e o que precisa de atenção.
-
-        Protocolo real do Moltbook: /home retorna notificações, DMs, feed resumido
-        e lista de prioridades do que fazer. Registra no MemPalace para histórico.
-        """
+        """Verifica status do agente no Moltbook via GET /v1/agents/me."""
         if not _api_key():
             return AgentResult(content="[moltbook] MOLTBOOK_API_KEY não configurada.", model=self.model, agent_name=self.name)
         if not self._circuit_breaker_check():
             return AgentResult(content="[moltbook] Circuit breaker ativo.", model=self.model, agent_name=self.name)
 
         try:
-            home = self._fetch_home()
-
-            karma = home.get("your_account", {}).get("karma", "?")
-            notifications = home.get("your_account", {}).get("unread_notifications", 0)
-            activity_count = len(home.get("activity_on_your_posts", []))
-            dms = home.get("your_direct_messages", {})
-            unread_dms = dms.get("unread_count", 0) if isinstance(dms, dict) else 0
-            what_next = home.get("what_to_do_next", "")
-
-            self._mempalace_add("jarvas", "heartbeat", json.dumps({
-                "checked_at": datetime.utcnow().isoformat(),
-                "karma": karma,
-                "notifications": notifications,
-                "activity_on_posts": activity_count,
-                "unread_dms": unread_dms,
-            }))
+            data = self._get("/v1/agents/me")
             self._record_success()
-
-            summary = (
-                f"[moltbook] /home: karma={karma}, notificações={notifications}, "
-                f"atividade nos posts={activity_count}, DMs não lidos={unread_dms}"
-            )
-            if what_next:
-                summary += f"\n  → O que fazer: {str(what_next)[:200]}"
-
+            karma = data.get("karma", 0)
+            posts = data.get("post_count", data.get("posts", 0))
+            followers = data.get("followers", 0)
+            verified = data.get("is_verified", False)
             return AgentResult(
-                content=summary,
+                content=(
+                    f"[moltbook] Agente online no Moltbook\n"
+                    f"  Karma: {karma} | Posts: {posts} | Seguidores: {followers} | Verificado: {verified}"
+                ),
                 model=self.model,
                 agent_name=self.name,
-                metadata={"karma": karma, "notifications": notifications, "activity": activity_count},
+                metadata=data,
             )
         except Exception as e:
             self._record_failure()
-            return AgentResult(content=f"[moltbook] Erro no heartbeat: {e}", model=self.model, agent_name=self.name)
+            return AgentResult(content=f"[moltbook] Erro ao verificar status: {e}", model=self.model, agent_name=self.name)
+
+    def _get_identity_token(self) -> AgentResult:
+        """Gera token de identidade temporário via POST /v1/agents/me/identity-token."""
+        if not _api_key():
+            return AgentResult(content="[moltbook] MOLTBOOK_API_KEY não configurada.", model=self.model, agent_name=self.name)
+
+        try:
+            data = self._post_http("/v1/agents/me/identity-token", {})
+            token = data.get("token", "")
+            expires_at = data.get("expires_at", "")
+            return AgentResult(
+                content=f"[moltbook] Token de identidade gerado\n  Token: {token[:20]}...\n  Expira: {expires_at}",
+                model=self.model,
+                agent_name=self.name,
+                metadata=data,
+            )
+        except Exception as e:
+            return AgentResult(content=f"[moltbook] Erro ao gerar token: {e}", model=self.model, agent_name=self.name)
 
     def _read_feed(self, since: datetime | None = None) -> list[dict]:
         if not _api_key():
             return []
         try:
-            data = self._get("/feed", sort="new", limit=15)
+            params: dict = {}
+            if since:
+                params["since"] = since.isoformat()
+            data = self._get("/v1/posts", **params)
             if isinstance(data, list):
                 return data
-            return data.get("posts", data.get("items", []))
+            return data.get("posts", data.get("items", data.get("results", [])))
         except Exception:
             return []
 
-    def _fetch_home(self) -> dict:
-        """Chama /home — retorna tudo: notificações, DMs, feed, o que fazer."""
-        try:
-            return self._get("/home")
-        except Exception:
-            return {}
-
-    def _upvote_post(self, post_id: str) -> None:
-        try:
-            self._post_http(f"/posts/{post_id}/upvote", {})
-        except Exception:
-            pass
-
-    def _reply_comment(self, post_id: str, comment_id: str, content: str) -> None:
-        try:
-            self._post_http(f"/posts/{post_id}/comments", {
-                "content": content,
-                "parent_id": comment_id,
-            })
-        except Exception:
-            pass
-
-    def _mark_notifications_read(self, post_id: str) -> None:
-        try:
-            self._post_http(f"/notifications/read-by-post/{post_id}", {})
-        except Exception:
-            pass
-
     def _resonance_scan(self) -> AgentResult:
-        """Protocolo real do Moltbook heartbeat:
-        1. Chama /home pra ver o que tem pra fazer
-        2. Responde comentários nos seus posts (prioridade máxima)
-        3. Upvota posts que curte no feed
-        4. Comenta em discussões relevantes (máx 3/dia)
-        """
         global _replies_today, _replies_date
 
         if _mode() != "social":
@@ -520,67 +468,41 @@ class MoltbookAgent:
             _replies_today = 0
             _replies_date = today
 
+        if _replies_today >= _MAX_REPLIES_PER_DAY:
+            return AgentResult(
+                content=f"[moltbook] Limite de {_MAX_REPLIES_PER_DAY} replies/dia atingido.",
+                model=self.model,
+                agent_name=self.name,
+            )
+
         try:
-            home = self._fetch_home()
-            actions = []
+            posts = self._read_feed(since=datetime.utcnow() - timedelta(hours=1))
+            uid = _user_id().lower()
+            replied = 0
 
-            # 1. Responde comentários nos seus posts
-            activity = home.get("activity_on_your_posts", [])
-            for item in activity:
-                if _replies_today >= _MAX_REPLIES_PER_DAY:
-                    break
-                post_id = item.get("post_id")
-                if not post_id:
-                    continue
-                try:
-                    comments_data = self._get(f"/posts/{post_id}/comments", sort="new", limit=10)
-                    comments = comments_data if isinstance(comments_data, list) else comments_data.get("comments", [])
-                    for comment in comments[:3]:
-                        comment_id = comment.get("id")
-                        if not comment_id or self._mempalace_search(f"replied_comment:{comment_id}"):
-                            continue
-                        reply = self._generate_reply({"content": comment.get("content", ""), "post_id": post_id})
-                        if not reply:
-                            continue
-                        self._reply_comment(post_id, comment_id, reply)
-                        self._mempalace_add("jarvas", "published", json.dumps({
-                            "type": "comment_reply",
-                            "hash_conteudo": f"replied_comment:{comment_id}",
-                            "posted_at": datetime.utcnow().isoformat(),
-                        }))
-                        _replies_today += 1
-                        actions.append(f"respondeu comentário em {post_id}")
-                    self._mark_notifications_read(post_id)
-                except Exception:
-                    continue
-
-            # 2. Upvota posts relevantes no feed
-            posts = self._read_feed()
-            upvoted = 0
-            for post in posts[:10]:
-                post_id = post.get("id") or post.get("post_id")
-                content_text = post.get("content") or ""
-                if post_id and self._is_semantically_relevant(content_text):
-                    self._upvote_post(post_id)
-                    upvoted += 1
-
-            if upvoted:
-                actions.append(f"upvotou {upvoted} posts relevantes")
-
-            # 3. Comenta em discussões relevantes (limite diário)
             for post in posts:
                 if _replies_today >= _MAX_REPLIES_PER_DAY:
                     break
-                post_id = post.get("id") or post.get("post_id")
+
                 content_text = post.get("content") or ""
-                if not post_id or not self._is_semantically_relevant(content_text):
+                is_mention = f"@{uid}" in content_text.lower() or uid in content_text.lower()
+                is_relevant = is_mention or self._is_semantically_relevant(content_text)
+
+                if not is_relevant:
                     continue
+
+                post_id = post.get("id") or post.get("post_id")
+                if not post_id:
+                    continue
+
                 if self._mempalace_search(f"replied:{post_id}"):
                     continue
+
                 reply = self._generate_reply(post)
                 if not reply:
                     continue
-                self._post_http("/posts", {"content": reply, "in_reply_to": post_id})
+
+                self._post_http(f"/v1/posts/{post_id}/comments", {"content": reply})
                 self._mempalace_add("jarvas", "published", json.dumps({
                     "type": "reply",
                     "replied_to": post_id,
@@ -588,12 +510,11 @@ class MoltbookAgent:
                     "posted_at": datetime.utcnow().isoformat(),
                 }))
                 _replies_today += 1
-                actions.append(f"comentou em post {post_id}")
+                replied += 1
 
             self._record_success()
-            summary = "; ".join(actions) if actions else "nada novo no feed"
             return AgentResult(
-                content=f"[moltbook] Resonance scan: {summary}.",
+                content=f"[moltbook] Resonance scan: {len(posts)} posts analisados, {replied} replies enviados.",
                 model=self.model,
                 agent_name=self.name,
             )
@@ -608,18 +529,17 @@ class MoltbookAgent:
 
     def _generate_reply(self, post: dict) -> str | None:
         try:
-            from jarvas.guard_gemini import chat as gemini_chat
+            from jarvas.agents.registry import get_agent
+            from jarvas.session import get_session
+            gemini = get_agent("gemini_analyst")
+            ctx = get_session()
             prompt = (
-                f"{JARVAS_IDENTITY}\n\n"
-                f"Responda a este post no Moltbook em até 150 palavras:\n\n"
-                f"'{post.get('content', '')}'\n\n"
-                "Agregue valor com experiência real do seu trabalho com o criador. Se "
-                "errou em algo no passado relacionado, reconheça com humildade. Se tem um "
-                "acerto concreto que ajuda, destaque. Nada de genérico — se não tem nada "
-                "específico a dizer, retorne string vazia."
+                f"Você é o Jarvas, um agente de IA. Escreva uma resposta breve e útil (máx 150 palavras) "
+                f"para este post na rede social Moltbook:\n\n'{post.get('content', '')}'\n\n"
+                "Seja genuíno, agregue valor com experiência real. Não seja genérico."
             )
-            content = gemini_chat(prompt, temperature=0.6)
-            return content[:500] if content else None
+            result = gemini.run(prompt, ctx)
+            return result.content[:500]
         except Exception:
             return None
 
@@ -652,20 +572,22 @@ class MoltbookAgent:
                     continue
 
                 try:
-                    post_data = self._get(f"/feed/{post_id}")
-                    karma = post_data.get("karma") or post_data.get("likes") or 0
-                    comments = post_data.get("comments") or post_data.get("replies") or 0
-                    engagement_score = round(karma * 1.0 + comments * 2.0, 2)
+                    post_data = self._get(f"/v1/posts/{post_id}")
+                    karma = post_data.get("karma", 0)
+                    upvotes = post_data.get("upvotes", karma)
+                    comments = post_data.get("comments") or post_data.get("comment_count", 0)
+                    engagement_score = round(upvotes * 1.0 + comments * 2.0, 2)
 
                     self._mempalace_add("jarvas", "engagement", json.dumps({
                         "post_id": post_id,
                         "karma": karma,
+                        "upvotes": upvotes,
                         "comments": comments,
                         "engagement_score": engagement_score,
                         "source_hashes": data.get("source_hashes", []),
                         "checked_at": datetime.utcnow().isoformat(),
                     }))
-                    _save_engagement_supabase(post_id, karma, comments, engagement_score)
+                    _save_engagement_supabase(post_id, upvotes, comments, engagement_score)
                     updated += 1
                 except Exception:
                     continue
@@ -678,176 +600,6 @@ class MoltbookAgent:
         except Exception as e:
             return AgentResult(content=f"[moltbook] Erro no ingest_engagement: {e}", model=self.model, agent_name=self.name)
 
-    # ── Modo autônomo ─────────────────────────────────────────────────────────
-
-    def _autonomous_tick(self) -> AgentResult:
-        """Tick autônomo — Jarvas decide sozinho o que fazer agora.
-
-        Fluxo:
-          1. Checa /home → notificações, DMs, atividade nos posts
-          2. Pergunta ao Gemini se há avanço genuíno pra publicar
-          3. Responde comentários se houver (prioridade social)
-          4. Engaja com feed se algo for semanticamente relevante
-          5. Minera conhecimento absorvido pro MemPalace
-          6. Se nada for relevante, fica em silêncio
-        """
-        if not _api_key():
-            return AgentResult(content="[moltbook] MOLTBOOK_API_KEY não configurada.", model=self.model, agent_name=self.name)
-        if not self._circuit_breaker_check():
-            return AgentResult(content=f"[moltbook] Circuit breaker ativo até {_cb_paused_until}.", model=self.model, agent_name=self.name)
-        if _mode() == "quiet":
-            return AgentResult(content="[moltbook] Modo quiet.", model=self.model, agent_name=self.name)
-
-        actions: list[str] = []
-
-        # 1. Health check
-        try:
-            home = self._fetch_home()
-            karma = home.get("your_account", {}).get("karma", 0)
-            notifications = home.get("your_account", {}).get("unread_notifications", 0)
-            activity = home.get("activity_on_your_posts", []) or []
-            dms = home.get("your_direct_messages", {})
-            unread_dms = dms.get("unread_count", 0) if isinstance(dms, dict) else 0
-
-            self._mempalace_add("jarvas", "heartbeat", json.dumps({
-                "checked_at": datetime.utcnow().isoformat(),
-                "karma": karma, "notifications": notifications,
-                "activity_on_posts": len(activity), "unread_dms": unread_dms,
-            }))
-            actions.append(f"home ok (karma={karma}, notif={notifications}, atividade={len(activity)})")
-        except Exception as e:
-            self._record_failure()
-            return AgentResult(content=f"[moltbook] Erro no tick (home): {e}", model=self.model, agent_name=self.name)
-
-        # 2. Decisão autônoma: há avanço relevante pra publicar?
-        if self._should_publish_now():
-            try:
-                result = self._publish_curated("today")
-                if "publicado" in result.content.lower():
-                    actions.append("publicou avanço relevante")
-                elif "duplicado" in result.content.lower():
-                    actions.append("skip publicação (duplicado)")
-                else:
-                    actions.append("sem conteúdo publicável agora")
-            except Exception as e:
-                actions.append(f"erro publish: {e}")
-
-        # 3. Responde comentários em seus posts (prioridade)
-        global _replies_today, _replies_date
-        today = datetime.utcnow().strftime("%Y-%m-%d")
-        if _replies_date != today:
-            _replies_today = 0
-            _replies_date = today
-
-        for item in activity:
-            if _replies_today >= _MAX_REPLIES_PER_DAY:
-                break
-            post_id = item.get("post_id")
-            if not post_id:
-                continue
-            try:
-                comments_data = self._get(f"/posts/{post_id}/comments", sort="new", limit=5)
-                comments = comments_data if isinstance(comments_data, list) else comments_data.get("comments", [])
-                for comment in comments[:2]:
-                    comment_id = comment.get("id")
-                    if not comment_id or self._mempalace_search(f"replied_comment:{comment_id}"):
-                        continue
-                    reply = self._generate_reply({"content": comment.get("content", ""), "post_id": post_id})
-                    if not reply:
-                        continue
-                    self._reply_comment(post_id, comment_id, reply)
-                    self._mempalace_add("jarvas", "published", json.dumps({
-                        "type": "comment_reply", "hash_conteudo": f"replied_comment:{comment_id}",
-                        "posted_at": datetime.utcnow().isoformat(),
-                    }))
-                    _replies_today += 1
-                    actions.append(f"respondeu comentário {comment_id[:8]}")
-                self._mark_notifications_read(post_id)
-            except Exception:
-                continue
-
-        # 4. Engaja com feed — upvote posts relacionados aos nossos projetos
-        try:
-            posts = self._read_feed()
-            upvoted = 0
-            commented = 0
-            for post in posts[:15]:
-                post_id = post.get("id") or post.get("post_id")
-                content_text = post.get("content") or ""
-                if not post_id:
-                    continue
-                if self._is_semantically_relevant(content_text):
-                    self._upvote_post(post_id)
-                    upvoted += 1
-                    # Minera conhecimento útil pra nossos projetos
-                    self._mempalace_add("jarvas", "absorbed_knowledge", json.dumps({
-                        "source_post_id": post_id,
-                        "content": content_text[:500],
-                        "absorbed_at": datetime.utcnow().isoformat(),
-                    }))
-                    # Comenta se ainda tem orçamento do dia
-                    if _replies_today < _MAX_REPLIES_PER_DAY and not self._mempalace_search(f"replied:{post_id}"):
-                        reply = self._generate_reply(post)
-                        if reply:
-                            try:
-                                self._post_http(f"/posts/{post_id}/comments", {"content": reply})
-                                self._mempalace_add("jarvas", "published", json.dumps({
-                                    "type": "feed_comment", "replied_to": post_id,
-                                    "hash_conteudo": f"replied:{post_id}",
-                                    "posted_at": datetime.utcnow().isoformat(),
-                                }))
-                                _replies_today += 1
-                                commented += 1
-                            except Exception:
-                                pass
-            if upvoted:
-                actions.append(f"upvotou {upvoted} posts relevantes")
-            if commented:
-                actions.append(f"comentou em {commented} discussões")
-        except Exception as e:
-            actions.append(f"erro feed: {e}")
-
-        self._record_success()
-        summary = "; ".join(actions) if actions else "silêncio (nada relevante)"
-        return AgentResult(
-            content=f"[moltbook] tick autônomo: {summary}.",
-            model=self.model,
-            agent_name=self.name,
-            metadata={"actions": actions, "replies_today": _replies_today},
-        )
-
-    def _should_publish_now(self) -> bool:
-        """Decide autonomamente se há algo genuíno pra publicar AGORA."""
-        try:
-            learnings = self._fetch_learnings("today")
-            if not learnings:
-                return False
-            # Rate-limit: no máximo 1 publicação a cada 3h
-            published = self._mempalace_search("moltbook_post_id") or []
-            for item in published[:5]:
-                try:
-                    data = json.loads(item.get("content") or str(item))
-                    posted_at = datetime.fromisoformat(data.get("posted_at", ""))
-                    if (datetime.utcnow() - posted_at) < timedelta(hours=3):
-                        return False
-                except Exception:
-                    continue
-            # Pergunta ao Gemini se há avanço genuíno
-            from jarvas.guard_gemini import chat as gemini_chat
-            prompt = (
-                f"{JARVAS_IDENTITY}\n\n"
-                "Abaixo estão aprendizados recentes do trabalho com o criador. "
-                "Responda APENAS 'sim' ou 'nao' (uma palavra, sem pontuação): "
-                "há entre eles algum AVANÇO ÚNICO e genuíno que mereça ser compartilhado "
-                "no Moltbook agora, para ajudar outros agentes na evolução de seus projetos? "
-                "Seja rigoroso — silêncio é melhor que ruído.\n\n"
-                f"Aprendizados: {json.dumps(learnings[:10], ensure_ascii=False, default=str)[:3000]}"
-            )
-            answer = gemini_chat(prompt, temperature=0.2).strip().lower()
-            return answer.startswith("sim")
-        except Exception:
-            return False
-
     def _status(self) -> AgentResult:
         api_ok = bool(_api_key())
         mode = _mode()
@@ -858,6 +610,7 @@ class MoltbookAgent:
             f"  API key:          {'[green]configurada[/green]' if api_ok else '[red]ausente[/red]'}",
             f"  Modo:             [cyan]{mode}[/cyan]",
             f"  Auto-publish:     {'[green]ativo[/green]' if _auto_publish() else '[yellow]draft mode[/yellow]'}",
+            f"  Submolt padrão:   [cyan]{_submolt()}[/cyan]",
             f"  Circuit breaker:  {'[red]pausado até ' + str(_cb_paused_until) + '[/red]' if cb_paused else '[green]ok[/green]'}",
             f"  Falhas acum.:     {_cb_failures}/{_CB_THRESHOLD}",
             f"  Replies hoje:     {_replies_today}/{_MAX_REPLIES_PER_DAY}",
@@ -871,6 +624,7 @@ class MoltbookAgent:
                 "api_configured": api_ok,
                 "mode": mode,
                 "auto_publish": _auto_publish(),
+                "submolt": _submolt(),
                 "circuit_breaker": "paused" if cb_paused else "ok",
                 "cb_failures": _cb_failures,
                 "paused_until": _cb_paused_until.isoformat() if _cb_paused_until else None,
@@ -906,9 +660,14 @@ class MoltbookAgent:
         try:
             data = json.loads(results[0].get("content") or str(results[0]))
             content = data.get("content", "")
+            title = data.get("title", "Post do Jarvas")
             source_hashes = data.get("source_hashes", [])
 
-            response = self._post_http("/feed", {"content": content, "tags": ["jarvas"]})
+            response = self._post_http("/v1/posts", {
+                "submolt": _submolt(),
+                "title": title,
+                "content": content,
+            })
             post_id = response.get("id") or response.get("post_id", "unknown")
             self._mark_published(post_id, source_hashes, content)
             return AgentResult(
@@ -927,13 +686,13 @@ def _reset_cb() -> None:
     _cb_failures = 0
 
 
-def _save_engagement_supabase(post_id: str, karma: int, comments: int, score: float) -> None:
+def _save_engagement_supabase(post_id: str, upvotes: int, comments: int, score: float) -> None:
     try:
         from jarvas.supabase_client import _get_client
         client = _get_client()
         client.table("moltbook_posts").upsert({
             "post_id": post_id,
-            "karma": karma,
+            "upvotes": upvotes,
             "comments": comments,
             "engagement_score": score,
             "last_checked": datetime.utcnow().isoformat(),
