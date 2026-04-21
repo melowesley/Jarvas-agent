@@ -12,6 +12,7 @@ import os
 from jarvas.managed.startup import seed_preset_agents
 from jarvas.managed.router import managed_router
 from jarvas.routes.autoescola_router import autoescola_router
+from jarvas.routes.dashboard_router import dashboard_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -21,6 +22,7 @@ async def lifespan(app):
 app = FastAPI(title="Jarvas API", version="0.5.0", lifespan=lifespan)
 app.include_router(managed_router)
 app.include_router(autoescola_router)
+app.include_router(dashboard_router)
 
 # Serve arquivos estáticos (chat UI)
 _static_dir = os.path.join(os.path.dirname(__file__), "static")

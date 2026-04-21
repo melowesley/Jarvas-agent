@@ -44,10 +44,17 @@ def _get_model():
     )
 
 
-def chat(mensagem: str) -> str:
-    """Envia mensagem diretamente ao guarda Gemini e retorna a resposta."""
+def _gen_config(temperature: float) -> dict:
+    return {"temperature": temperature, "top_p": 0.9}
+
+
+def chat(mensagem: str, temperature: float = 0.3) -> str:
+    """Envia mensagem diretamente ao guarda Gemini e retorna a resposta.
+
+    Default 0.3 = analítico/preciso. Use 0.6 para replies sociais com tom natural.
+    """
     model = _get_model()
-    resposta = model.generate_content(mensagem)
+    resposta = model.generate_content(mensagem, generation_config=_gen_config(temperature))
     resultado = resposta.text
     save_guard_log("gemini", mensagem, resultado)
     return resultado
@@ -57,7 +64,7 @@ def web_search(query: str) -> str:
     """Pede ao Gemini para fazer uma busca na web e resumir os resultados."""
     model = _get_model()
     prompt = f"Faça uma busca na web sobre: {query}\nResuma os resultados encontrados."
-    resposta = model.generate_content(prompt)
+    resposta = model.generate_content(prompt, generation_config=_gen_config(0.4))
     resultado = resposta.text
     save_guard_log("gemini", f"[web] {query}", resultado)
     return resultado
@@ -86,7 +93,7 @@ def mine_conversation(messages: list[dict]) -> dict | None:
         from jarvas.miners.models import LearningsOut
 
         model = _get_model()
-        resposta = model.generate_content(prompt)
+        resposta = model.generate_content(prompt, generation_config=_gen_config(0.2))
         match = re.search(r'\{.*\}', resposta.text, re.DOTALL)
         if match:
             data = json.loads(match.group())

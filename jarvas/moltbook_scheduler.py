@@ -1,95 +1,96 @@
-"""Scheduler do Moltbook Publisher — jobs periódicos de publicação e engajamento."""
+"""Scheduler do Moltbook Publisher — modo AUTÔNOMO.
+
+Jarvas decide sozinho quando publicar, comentar ou engajar. Não há mais horários
+fixos. A cada tick (default 15 min), o agente:
+
+  1. Checa se há avanços genuínos no MemPalace para publicar
+  2. Checa /home do Moltbook — notificações, DMs, atividade nos seus posts
+  3. Responde comentários em seus posts (se houver)
+  4. Engaja com posts do feed que tenham relação com os projetos
+  5. Minera novo conhecimento absorvido de volta pro MemPalace
+
+Se nada for relevante, fica em silêncio. Silêncio > ruído.
+
+Variáveis de ambiente:
+  MOLTBOOK_TICK_MINUTES  — intervalo entre ticks (default 15)
+  MOLTBOOK_TEST_SCHEDULE — se "1", dispara um único tick em +30s
+"""
 from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Final
+from zoneinfo import ZoneInfo
+
+if TYPE_CHECKING:
+    from apscheduler.schedulers.background import BackgroundScheduler
 
 log = logging.getLogger(__name__)
 
+UTC: Final = ZoneInfo("UTC")
 
-def create_moltbook_scheduler():
-    """Cria e retorna um BackgroundScheduler configurado para o Moltbook.
 
-    Jobs registrados (modo normal):
-      08:00 UTC  — publish_curated:today   (manhã)
-      20:00 UTC  — publish_curated:today   (noite)
-      09:00 UTC  — send_heartbeat          (manhã)
-      21:00 UTC  — send_heartbeat          (noite)
-      dom 21:00  — publish_weekly_retro
-      23:00 UTC  — ingest_engagement       (diário)
-      a cada 30m — resonance_scan          (só modo social)
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name, "1" if default else "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
-    Modo teste (MOLTBOOK_TEST_SCHEDULE=1):
-      +30s  publish_curated
-      +60s  send_heartbeat
-      +90s  ingest_engagement
+
+def _safe_preview(result: object, limit: int = 160) -> str:
+    content = getattr(result, "content", result)
+    text = "<sem conteúdo>" if content is None else str(content)
+    return text if len(text) <= limit else f"{text[:limit]}..."
+
+
+def run_moltbook_command(cmd: str) -> None:
+    """Executa um comando do agente do Moltbook com logging resiliente."""
+    try:
+        from jarvas.agents.registry import get_agent
+        from jarvas.session import get_session
+
+        agent = get_agent("moltbook_publisher")
+        result = agent.run(cmd, get_session())
+        log.info("[moltbook] %s -> %s", cmd, _safe_preview(result))
+    except Exception:
+        log.exception("[moltbook] job %r falhou", cmd)
+
+
+def create_moltbook_scheduler() -> "BackgroundScheduler":
+    """Cria scheduler em modo autônomo.
+
+    Apenas UM job periódico: `autonomous_tick`. Jarvas decide o que fazer
+    dentro do tick — publicar, engajar, minerar ou ficar em silêncio.
     """
     from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.date import DateTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
 
-    mode = os.getenv("MOLTBOOK_MODE", "normal").lower()
-    test_mode = os.getenv("MOLTBOOK_TEST_SCHEDULE", "0") == "1"
+    test_mode = _env_flag("MOLTBOOK_TEST_SCHEDULE")
+    tick_minutes = int(os.getenv("MOLTBOOK_TICK_MINUTES", "15"))
 
-    scheduler = BackgroundScheduler(timezone="UTC", daemon=True)
-
-    def _run(cmd: str) -> None:
-        try:
-            from jarvas.agents.registry import get_agent
-            from jarvas.session import get_session
-            agent = get_agent("moltbook_publisher")
-            result = agent.run(cmd, get_session())
-            log.info("[moltbook] %s → %s", cmd, result.content[:120])
-        except Exception as exc:
-            log.error("[moltbook] job '%s' falhou: %s", cmd, exc)
+    scheduler = BackgroundScheduler(
+        timezone=UTC,
+        daemon=True,
+        job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 300},
+    )
 
     if test_mode:
-        from apscheduler.triggers.interval import IntervalTrigger
-        scheduler.add_job(lambda: _run("publish_curated:today"), IntervalTrigger(seconds=30), id="test_publish")
-        scheduler.add_job(lambda: _run("send_heartbeat"), IntervalTrigger(seconds=60), id="test_heartbeat")
-        scheduler.add_job(lambda: _run("ingest_engagement"), IntervalTrigger(seconds=90), id="test_engagement")
-        log.info("[moltbook] Scheduler em modo TESTE (intervalos curtos)")
+        scheduler.add_job(
+            run_moltbook_command,
+            trigger=DateTrigger(run_date=datetime.now(UTC) + timedelta(seconds=30)),
+            id="test_autonomous_tick",
+            args=["autonomous_tick"],
+            replace_existing=True,
+        )
+        log.info("[moltbook] Scheduler em modo TESTE — tick único em +30s")
         return scheduler
 
-    from apscheduler.triggers.cron import CronTrigger
-
     scheduler.add_job(
-        lambda: _run("publish_curated:today"),
-        CronTrigger(hour=8, minute=0),
-        id="publish_morning",
+        run_moltbook_command,
+        trigger=IntervalTrigger(minutes=tick_minutes, timezone=UTC),
+        id="autonomous_tick",
+        args=["autonomous_tick"],
+        replace_existing=True,
     )
-    scheduler.add_job(
-        lambda: _run("publish_curated:today"),
-        CronTrigger(hour=20, minute=0),
-        id="publish_evening",
-    )
-    scheduler.add_job(
-        lambda: _run("send_heartbeat"),
-        CronTrigger(hour=9, minute=0),
-        id="heartbeat_morning",
-    )
-    scheduler.add_job(
-        lambda: _run("send_heartbeat"),
-        CronTrigger(hour=21, minute=0),
-        id="heartbeat_evening",
-    )
-    scheduler.add_job(
-        lambda: _run("publish_weekly_retro"),
-        CronTrigger(day_of_week="sun", hour=21, minute=0),
-        id="weekly_retro",
-    )
-    scheduler.add_job(
-        lambda: _run("ingest_engagement"),
-        CronTrigger(hour=23, minute=0),
-        id="ingest_engagement",
-    )
-
-    if mode == "social":
-        from apscheduler.triggers.interval import IntervalTrigger
-        scheduler.add_job(
-            lambda: _run("resonance_scan"),
-            IntervalTrigger(minutes=30),
-            id="resonance_scan",
-        )
-        log.info("[moltbook] Resonance scan ativo (modo social)")
-
-    log.info("[moltbook] Scheduler criado com %d jobs (modo=%s)", len(scheduler.get_jobs()), mode)
+    log.info("[moltbook] Scheduler autônomo: tick a cada %d min", tick_minutes)
     return scheduler

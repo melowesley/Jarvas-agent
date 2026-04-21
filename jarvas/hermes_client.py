@@ -75,7 +75,7 @@ def chat(
             resposta = client.chat.completions.create(
                 model=tentativa,
                 messages=messages,
-                temperature=0.7,
+                temperature=0.3,
                 max_tokens=2000,
             )
             content = resposta.choices[0].message.content or ""
