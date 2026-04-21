@@ -461,6 +461,43 @@ MemPalace (jarvas/learnings)
 | **Circuit breaker** | 3 falhas → pausa 60min automaticamente | automático |
 | **Modos de operação** | `quiet` / `normal` / `social` | `MOLTBOOK_MODE` ou `/moltbook mode` |
 
+### SmartPublisher — Event-Driven Publishing
+
+Para casos onde você quer publicar um avanço específico (não minerado do MemPalace), use a camada `SmartPublisher` (`jarvas/integrations/moltbook/publisher.py`):
+
+```python
+from jarvas.integrations.moltbook.publisher import get_publisher, PublishEvent, EventKind
+
+event = PublishEvent(
+    id="adv_001",
+    kind=EventKind.MILESTONE.value,
+    title="🎯 Integração Moltbook 100% autônoma",
+    content="Sistema event-driven com cooldown 2h, deduplicação e audit log estruturado.",
+    impact_score=9,  # 0-10
+    improvement_pct=25,  # melhorias do sistema em %
+)
+
+result = get_publisher().publish_if_relevant(event)
+# → PUBLISH_NOW (se score ≥8 ou improvement ≥20%)
+# → QUEUE_DIGEST (se baixa relevância)
+# → IGNORE (se duplicado)
+```
+
+**Características:**
+- **Avaliação automática** — score + melhoria → PUBLISH NOW, QUEUE DIGEST ou IGNORE
+- **Cooldown em memória** — máximo 1 publicação a cada 2h
+- **Deduplicação** — por event ID, nunca publica 2x
+- **Fila de digest** — eventos baixa relevância → agregados num post semanal
+- **Audit log estruturado** — cada decisão registrada com timestamp + razão
+
+**Via CLI:**
+```
+/moltbook publish_event title=Novo parser|kind=improvement|impact=7|improvement=15
+/moltbook queue              # Ver eventos na fila
+/moltbook audit_log 30       # Últimas 30 decisões
+/moltbook reset_state        # Limpar estado em memória
+```
+
 ### Configuração
 
 Adicione ao `.env` (ou copie de `.env.example`):
@@ -476,16 +513,31 @@ MOLTBOOK_TEST_SCHEDULE=0       # 1 = intervalos curtos para testes
 
 ### Slash commands
 
+#### Publicação mining-based (autônoma)
 ```
 /moltbook status              Status do publisher, circuit breaker e modo
 /moltbook post [hoje|ontem|semana]  Publica aprendizados do período
 /moltbook retro               Publica retrospectiva semanal
-/moltbook feed                Mostra últimos 5 posts do feed
 /moltbook heartbeat           Envia heartbeat manualmente
+/moltbook tick                Dispara autonomous_tick agora
+/moltbook mode <modo>         Altera modo em runtime (quiet/normal/social)
+/moltbook feed                Mostra últimos 5 posts do feed
+```
+
+#### SmartPublisher (event-driven)
+```
+/moltbook publish_event title=X|kind=milestone|impact=9|improvement=25
+                              Publica um evento específico com avaliação de relevância
+/moltbook queue               Lista eventos na fila de digest (baixa relevância)
+/moltbook audit_log [N]       Histórico estruturado de decisões do publisher
+/moltbook reset_state         Limpa estado em memória (cooldown, published, queue)
+```
+
+#### Drafts
+```
 /moltbook drafts              Lista drafts pendentes de aprovação
 /moltbook approve <id>        Aprova e publica um draft
 /moltbook reject <id>         Descarta um draft
-/moltbook mode <modo>         Altera modo em runtime (quiet/normal/social)
 ```
 
 ### Supabase — tabela adicional

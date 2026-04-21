@@ -91,6 +91,9 @@ def _help() -> str:
         "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar draft\n"
         "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
         "  [cyan]/moltbook mode[/cyan] <quiet|normal|social> → Alterar modo\n"
+        "  [cyan]/moltbook tick[/cyan]                → Disparar autonomous_tick\n"
+        "  [cyan]/moltbook audit_log[/cyan] [N]       → Histórico de decisões\n"
+        "  [cyan]/moltbook queue[/cyan]               → Fila de digest\n"
     )
 
 
@@ -198,6 +201,53 @@ def _moltbook(args: str) -> str:
             os.environ["MOLTBOOK_MODE"] = new_mode
             return f"[green]Modo Moltbook alterado para:[/green] {new_mode}"
 
+        if subcmd == "tick":
+            return agent.run("autonomous_tick", ctx).content
+
+        if subcmd == "publish_event":
+            from jarvas.integrations.moltbook.publisher import get_publisher, PublishEvent
+            import uuid
+            parts = dict(p.split("=", 1) for p in rest.split("|") if "=" in p)
+            event = PublishEvent(
+                id=parts.get("id", str(uuid.uuid4())[:8]),
+                kind=parts.get("kind", "improvement"),
+                title=parts.get("title", "Avanço sem título"),
+                content=parts.get("content", parts.get("title", "")),
+                impact_score=int(parts.get("impact", 5)),
+                improvement_pct=int(parts.get("improvement", 0)),
+            )
+            result = get_publisher().publish_if_relevant(event)
+            return f"[cyan]{result['status']}[/cyan] — evento {event.id} ({result['evaluation']['decision']})"
+
+        if subcmd == "queue":
+            from jarvas.integrations.moltbook.publisher import get_publisher
+            q = get_publisher().get_queue()
+            if not q:
+                return "[dim]Fila vazia.[/dim]"
+            lines = [f"[bold]Fila ({len(q)} eventos):[/bold]"]
+            for e in q:
+                lines.append(f"  [cyan]{e.id[:8]}[/cyan] {e.title} (score={e.impact_score})")
+            return "\n".join(lines)
+
+        if subcmd == "audit_log":
+            from jarvas.integrations.moltbook.publisher import get_publisher
+            limit = int(rest) if rest.isdigit() else 20
+            log_entries = get_publisher().get_audit_log(limit)
+            if not log_entries:
+                return "[dim]Sem entradas no log.[/dim]"
+            lines = [f"[bold]Audit log ({len(log_entries)} entradas):[/bold]"]
+            for e in log_entries:
+                ts = e["timestamp"][11:19]
+                lines.append(f"  {ts} | [cyan]{e['event_id'][:8]}[/cyan] | {e['action']} → [yellow]{e['decision']}[/yellow] ({e['reason']})")
+            return "\n".join(lines)
+
+        if subcmd == "reset_state":
+            from jarvas.integrations.moltbook.publisher import get_publisher
+            pub = get_publisher()
+            old = pub.status()
+            pub.reset()
+            return f"[yellow]Estado resetado.[/yellow] Antes: {old['published_count']} publicados, {old['queued_count']} em fila."
+
         return (
             "\n[bold]Moltbook commands:[/bold]\n"
             "  [cyan]/moltbook status[/cyan]              → Status do publisher e circuit breaker\n"
@@ -205,10 +255,15 @@ def _moltbook(args: str) -> str:
             "  [cyan]/moltbook retro[/cyan]               → Publicar retrospectiva semanal\n"
             "  [cyan]/moltbook feed[/cyan]                → Ver últimos posts do feed\n"
             "  [cyan]/moltbook heartbeat[/cyan]           → Enviar heartbeat manualmente\n"
+            "  [cyan]/moltbook tick[/cyan]                → Disparar autonomous_tick agora\n"
             "  [cyan]/moltbook drafts[/cyan]              → Listar drafts pendentes\n"
             "  [cyan]/moltbook approve[/cyan] <id>        → Aprovar e publicar draft\n"
             "  [cyan]/moltbook reject[/cyan] <id>         → Rejeitar draft\n"
             "  [cyan]/moltbook mode[/cyan] <modo>         → Alterar modo (quiet/normal/social)\n"
+            "  [cyan]/moltbook publish_event[/cyan] title=X|kind=milestone|impact=9|improvement=25\n"
+            "  [cyan]/moltbook queue[/cyan]               → Fila de digest\n"
+            "  [cyan]/moltbook audit_log[/cyan] [N]       → Histórico de decisões\n"
+            "  [cyan]/moltbook reset_state[/cyan]         → Limpa estado do SmartPublisher\n"
         )
 
     except KeyError:
